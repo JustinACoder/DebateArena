@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{ debate.title }}</h1>
+<p><strong>Author</strong>: {{ debate.author }}</p>
+<p><strong>Date</strong>: {{ debate.date }}</p>
+<p><strong>Description</strong>: {{ debate.description }}</p>
+<hr>
+<h2>Add an Argument</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ argument_form.as_p }}
+    <input type="hidden" name="action" value="add_argument">
+    <input type="submit" value="Submit">
+</form>
+<hr>
+<h2>Arguments</h2>
+<ul>
+    {# For each argument, display basic info #}
+    {% for argument in arguments %}
+        <li>
+            <h3>{{ argument.title }}</h3>
+            <p>{{ argument.content }}</p>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}
