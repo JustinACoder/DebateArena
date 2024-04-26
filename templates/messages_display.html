@@ -1,0 +1,13 @@
+{# This template is meant to be imported in pages that want to display messages sent in backend #}
+{# For instance, it is used after user registration to indicate to the user that the registration #}
+{# was successful and the user now needs to connect #}
+
+{% if messages %}
+    <div class="container w-50">
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}

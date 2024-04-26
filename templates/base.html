@@ -10,8 +10,9 @@
     <meta name="keywords" content="No Keywords Yet">
     <meta name="author" content="JustinACoder">
     <title>No Title Yet</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'libraries/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'libraries/bootstrap-icons.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <script src="{% static 'libraries/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'libraries/bootstrap.bundle.min.js' %}"></script>
 </head>
@@ -30,19 +31,55 @@
                 </li>
             </ul>
         </div>
-        
+        <!-- Right Side with profile icon and dropdown -->
+        <div class="btn-group">
+            <a class="nav-link" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"
+               aria-expanded="false">
+                <div class="row gx-2">
+                    <div class="col-auto me-auto align-content-center">
+                    {# display user name #}
+                    {% if not user.is_authenticated %}
+                        {# if the user is not connected, display "Not Connected" #}
+                        <span class="text-white"><em>Not Connected</em></span>
+                    {% else %}
+                        {# if the user is connected, display the user's username #}
+                        <span class="text-white">{{ user.username }}</span>
+                    {% endif %}
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-person-circle text-white fs-3"></i>
+                    </div>
+                </div>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                {% if not user.is_authenticated %}
+                    {# if the user is not connected, provide options to register or login #}
+                    <a class="dropdown-item" href="{% url 'user_register' %}?next={{ request.GET.next|default:request.path }}">Register</a>
+                    <a class="dropdown-item" href="{% url 'user_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
+                {% else %}
+                    {# if the user is connected, provide options to view profile, settings and logout #}
+                    <a class="dropdown-item" href="#">Profile</a>
+                    <a class="dropdown-item" href="#">Settings</a>
+                    <div class="dropdown-divider"></div>
+                    <form action="{% url 'user_logout' %}?next={{ request.GET.next|default:request.path }}" method="post">
+                        {% csrf_token %}
+                        <button class="dropdown-item" type="submit">Logout</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </nav>
 
 <!-- Content -->
-<div class="container-fluid" style="margin-top: 80px">
+<div class="content container-fluid" style="margin: 80px auto">
     {% block content %}
     {% endblock %}
 </div>
 
 <!-- Footer -->
 <footer>
-    <div class="container-fluid bg-dark text-white text-center p-3">
+    <div class="container-fluid bg-dark text-white text-center p-3 h">
         <span>&copy; 2024 Open Debate</span>
     </div>
 </footer>
