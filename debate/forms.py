@@ -1,14 +1,13 @@
 from django.forms import ModelForm
-from .models import Debate, Argument
+from .models import Debate, Comment
 
 
 class DebateForm(ModelForm):
     class Meta:
         model = Debate
-        fields = ['title', 'description', 'author']
+        fields = ['title', 'description']
 
-
-class ArgumentForm(ModelForm):
+class CommentForm(ModelForm):
     class Meta:
-        model = Argument
-        fields = ['title', 'content', 'author']
+        model = Comment
+        fields = ['text']

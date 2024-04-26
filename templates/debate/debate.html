@@ -1,27 +1,39 @@
 {% extends 'base.html' %}
+{% load crispy_forms_filters %}
 
 {% block content %}
-<h1>{{ debate.title }}</h1>
-<p><strong>Author</strong>: {{ debate.author }}</p>
-<p><strong>Date</strong>: {{ debate.date }}</p>
-<p><strong>Description</strong>: {{ debate.description }}</p>
-<hr>
-<h2>Add an Argument</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ argument_form.as_p }}
-    <input type="hidden" name="action" value="add_argument">
-    <input type="submit" value="Submit">
-</form>
-<hr>
-<h2>Arguments</h2>
-<ul>
-    {# For each argument, display basic info #}
-    {% for argument in arguments %}
-        <li>
-            <h3>{{ argument.title }}</h3>
-            <p>{{ argument.content }}</p>
-        </li>
-    {% endfor %}
-</ul>
+    <h1>{{ debate.title }}</h1>
+    <p><strong>Author</strong>: {{ debate.author }}</p>
+    <p><strong>Date</strong>: {{ debate.date }}</p>
+    <p><strong>Description</strong>: {{ debate.description }}</p>
+    <hr>
+    <h2>Add a Comment</h2>
+    {# Display the form only if the user is connected #}
+    {% if user.is_authenticated %}
+        <form method="post">
+            {% csrf_token %}
+            {{ comment_form | crispy }}
+            <input type="hidden" name="action" value="add_comment">
+            <button type="submit" class="btn btn-primary">Add Comment</button>
+        </form>
+    {% else %}
+        <p>You must be connected to add a comment. Please <a href="{% url 'user_login' %}?next={{request.path}}">log in</a> or <a href="{% url 'user_register' %}?next={{request.path}}">register</a>.</p>
+    {% endif %}
+    <hr>
+    <h2>Comments</h2>
+    {# If there are no comments, display a message #}
+    {% if comments|length == 0 %}
+        <em>No comments yet.</em>
+        {# Otherwise, display the comments #}
+    {% else %}
+        <ul>
+            {# For each comment, display basic info #}
+            {% for comment in comments %}
+                <li>
+                    <h3>{{ comment.title }}</h3>
+                    <p>{{ comment.content }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endblock %}
