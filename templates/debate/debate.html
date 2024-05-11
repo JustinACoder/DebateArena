@@ -30,8 +30,8 @@
             {# For each comment, display basic info #}
             {% for comment in comments %}
                 <li>
-                    <h3>{{ comment.title }}</h3>
-                    <p>{{ comment.content }}</p>
+                    <h3>{{ comment.author }}</h3>
+                    <p>{{ comment.text }}</p>
                 </li>
             {% endfor %}
         </ul>

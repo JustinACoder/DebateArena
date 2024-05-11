@@ -1,7 +1,5 @@
-from django.views.decorators.http import require_http_methods
 from django.shortcuts import render, get_object_or_404
-from django.contrib import messages
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponseForbidden
 from .forms import CommentForm
 from .models import Debate, Comment
 import logging
@@ -15,18 +13,18 @@ def index(request):
 
 
 def debate(request, debate_title):
-    debate_instance = get_object_or_404(Debate, title=debate_title)
+    debate_instance = get_object_or_404(Debate.objects.select_related('author'), title=debate_title)
 
     # If the request is a POST request, there is an action to be performed
     if request.method == 'POST':
         if 'action' not in request.POST:
-            return HttpResponse("Missing action in POST request", status=400)
+            return HttpResponseBadRequest()
 
         # Depending on the action, perform the appropriate action
         if request.POST['action'] == 'add_comment':
             # Check that the user is authenticated
             if not request.user.is_authenticated:
-                return HttpResponse("You must be logged in to comment", status=403)
+                return HttpResponseForbidden()
 
             # Create a comment using the form data
             comment_form = CommentForm(request.POST)
@@ -42,13 +40,14 @@ def debate(request, debate_title):
                 return HttpResponseRedirect(request.path_info)
         else:
             # If the action is not recognized, return an error
-            logger.warning("Invalid debate action in POST request: %s", request.POST['action'])
-            return HttpResponse("Invalid debate action in POST request", status=400)
+            return HttpResponseBadRequest()
     else:
         comment_form = CommentForm()
 
     # Get all comments for the debate sorted by date
-    comments = debate_instance.comment_set.order_by('date_added')
+    comments = (debate_instance.comment_set
+                .order_by('date_added')
+                .select_related('author'))
 
     # Define the context to be passed to the template
     context = {

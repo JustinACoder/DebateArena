@@ -7,6 +7,7 @@ class DebateForm(ModelForm):
         model = Debate
         fields = ['title', 'description']
 
+
 class CommentForm(ModelForm):
     class Meta:
         model = Comment
