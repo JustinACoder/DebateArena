@@ -2,11 +2,13 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Window, F, BooleanField, When, Case, Value, TextField, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import FirstValue, Coalesce
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.db import connection
+
+from debate.models import Debate
 from discussion.forms import MessageForm
 from discussion.models import Discussion, Message
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
 
 
 def dictfetchall(cursor):
@@ -98,6 +100,7 @@ def specific_discussion(request, discussion_id):
     return render(request, 'discussion/discussion_board.html', context=context)
 
 
+@login_required
 def retrieve_messages(request, discussion_id):
     discussion_instance = (Discussion.objects
                            .prefetch_related('message_set')

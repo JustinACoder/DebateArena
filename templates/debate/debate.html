@@ -1,11 +1,76 @@
 {% extends 'base.html' %}
 {% load crispy_forms_filters %}
 
+{% block head %}
+    <style>
+        .stance {
+            opacity: 50%;
+        }
+
+        .stance:hover {
+            opacity: 100%;
+        }
+
+        .stance.active {
+            opacity: 100% !important;
+        }
+        
+        .request-not-allowed {
+            opacity: 50%;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
     <h1>{{ debate.title }}</h1>
+    {% include 'messages_display.html' %}
     <p><strong>Author</strong>: {{ debate.author }}</p>
     <p><strong>Date</strong>: {{ debate.date }}</p>
     <p><strong>Description</strong>: {{ debate.description }}</p>
+
+    <!-- Set your stance -->
+    <h2>Set Your Stance</h2>
+    {% if request.user.is_authenticated %}
+        <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
+             aria-label="Set Your Stance">
+            <button type="button" class="btn btn-success w-100 stance {% if debate.user_stance %}active{% endif %}"
+                    id="stance-for-btn" data-stance="for">For
+            </button>
+            <button type="button" class="btn btn-primary" id="stance-reset-btn">Reset</button>
+            <button type="button"
+                    class="btn btn-danger w-100 stance {% if debate.user_stance == False %}active{% endif %}"
+                    id="stance-against-btn" data-stance="against">Against
+            </button>
+        </div>
+    {% else %}
+        <p>You must be connected to set your stance. Please <a href="{% url 'user_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+    {% endif %}
+
+    <!-- Debate with someone -->
+    <br>
+    <h2>Debate with Someone</h2>
+    {% if request.user.is_authenticated %}
+        <form method="post" id="request-discussion-form">
+            {% csrf_token %}
+            <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
+                 aria-label="Debate with Someone">
+                <button type="submit" class="btn btn-success w-100 {{ debate.has_requested_for|yesno:'request-not-allowed,' }}"
+                        formaction="{% url 'request_discussion' debate.title %}?stance_wanted=for">For
+                </button>
+                <button type="submit"
+                        class="btn btn-danger w-100 {{ debate.has_requested_against|yesno:'request-not-allowed,' }}"
+                        formaction="{% url 'request_discussion' debate.title %}?stance_wanted=against">Against
+                </button>
+            </div>
+        </form>
+    {% else %}
+        <p>You must be connected to debate with someone. Please <a
+                href="{% url 'user_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+    {% endif %}
+
+    <!-- Add comments -->
     <hr>
     <h2>Add a Comment</h2>
     {# Display the form only if the user is connected #}
@@ -17,8 +82,11 @@
             <button type="submit" class="btn btn-primary">Add Comment</button>
         </form>
     {% else %}
-        <p>You must be connected to add a comment. Please <a href="{% url 'user_login' %}?next={{request.path}}">log in</a> or <a href="{% url 'user_register' %}?next={{request.path}}">register</a>.</p>
+        <p>You must be connected to add a comment. Please <a href="{% url 'user_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
+
+    <!-- Display comments -->
     <hr>
     <h2>Comments</h2>
     {# If there are no comments, display a message #}
@@ -36,4 +104,83 @@
             {% endfor %}
         </ul>
     {% endif %}
+
+    <script>
+        let stanceBtns = $('.stance');
+        let stanceResetBtn = $('#stance-reset-btn');
+        let requestDiscussionBtns = $('#request-discussion-form button');
+        let has_stance = {{ has_stance|yesno:'true,true,false' }};
+
+        // Reset the stance when the user clicks on the "Reset" button
+        stanceResetBtn.click(function () {
+            // if no stance is selected, do nothing
+            if (!stanceBtns.hasClass('active')) {
+                return
+            }
+            
+            let is_updated = updateStance('reset');
+            if (!is_updated) {
+                return
+            }
+
+            stanceBtns.removeClass('active');
+        });
+
+        // Update the stance when the user clicks on the stance buttons
+        stanceBtns.click(function () {
+            // if the user clicks on the active button, do nothing
+            if ($(this).hasClass('active')) {
+                return
+            }
+
+            let stance = $(this).data('stance');
+            let is_updated = updateStance(stance);
+            if (!is_updated) {
+                return
+            }
+            
+            stanceBtns.removeClass('active');
+            $(this).addClass('active');
+        });
+
+        function updateStance(stance) {
+            // TODO: Make confirmation dialog prettier (using Bootstrap modal for example)
+            if (stance === 'reset' && has_stance && !confirm("WARNING: You are about to reset your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
+                return false;
+            } else if (stance !== 'reset' && has_stance && !confirm("You are about to change your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
+                return false;
+            }
+
+            $.post(
+                "{% url 'set_stance' debate.title %}",
+                {stance: stance, csrfmiddlewaretoken: '{{ csrf_token }}'}
+            ).fail(function (data) {
+                alert('An error occurred. Please try again. Details: ' + data.responseText);
+                return false;
+            });
+            
+            has_stance = stance !== 'reset';
+            
+            requestDiscussionBtns.removeClass('request-not-allowed');
+            
+            return true;
+        }
+
+        // Ensure that the user can't request a discussion if no stance is selected
+        requestDiscussionBtns.click(function (event) {
+            if (!stanceBtns.hasClass('active')) {
+                event.preventDefault();
+                $(this)[0].setCustomValidity('Please select a stance before requesting a discussion.');
+                $(this)[0].reportValidity();
+            } else if ($(this).hasClass('request-not-allowed')) {
+                event.preventDefault();
+                $(this)[0].setCustomValidity('You have already requested a discussion with someone with this stance.');
+                $(this)[0].reportValidity();
+            } else {
+                requestDiscussionBtns.each(function () {
+                    $(this)[0].setCustomValidity('');
+                });
+            }
+        });
+    </script>
 {% endblock %}
