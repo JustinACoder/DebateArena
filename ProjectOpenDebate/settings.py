@@ -28,7 +28,12 @@ environ.Env.read_env(env_file)
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY")
+# TODO: The .env file doesn't get pushed to github, so the SECRET_KEY is not available in the repository
+#  Therefore, we set a default value for the SECRET_KEY here
+#  However, this is not a good long term solution as we could forget to set .env in production
+#  It would also require us to set a default value for every environment variable in the code which is not ideal
+#  Therefore, we must search for better solutions to this problem in the future
+SECRET_KEY = env("SECRET_KEY", default="django-insecure$@&!")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
