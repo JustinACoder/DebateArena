@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_filters %}
+{% load tz %} {# used to force America/Montreal timezone, this should adapt to the user/device #}
+
+{% block head %}
+    <script src="{% static 'libraries/jquery.timeago.min.js' %}" type="text/javascript"></script>
+
+    <style>
+        #main-content {
+            overflow-y: auto;
+        }
+
+        .overflow-y-scroll-custom {
+            overflow-y: scroll;
+            scrollbar-color: rgba(var(--bs-secondary-rgb)) transparent;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="p-2 position-absolute start-0 end-0" style="margin: 0 20%">
+        <button class="btn btn-primary d-md-none w-100 fs-5" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas">
+            Open Discussion List
+        </button>
+    </div>
+    <div class="row flex-nowrap h-100">
+        <div class="col-auto bg-light p-2 pe-0 h-100 offcanvas-md offcanvas-start"
+             style="width: 300px"
+             id="chat-list-canvas">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title">Your Discussions</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                        data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
+                        aria-label="Close"></button>
+            </div>
+            <div class="overflow-y-scroll-custom h-100 w-100" id="chat-list">
+                {% for discussion_info in discussions_info %}
+                    <a href="{% url 'specific_discussion' discussion_info.discussion_id %}"
+                       data-discussionid="{{ discussion_info.discussion_id }}"
+                       id="discussion-{{ discussion_info.discussion_id }}"
+                       data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
+                       class="btn btn-light w-100 text-start my-2">
+                        <strong>{{ discussion_info.debate_title }}</strong><br>
+                        <span class="fst-italic">
+                    {% if request.user.id == discussion_info.participant1_id %}
+                        {{ discussion_info.participant2_username }}
+                    {% else %}
+                        {{ discussion_info.participant1_username }}
+                    {% endif %}
+                    </span><br>
+                        <div class="row">
+                            <span id="latest-message-{{ discussion_info.discussion_id }}"
+                                  class="fst-italic text-secondary small col">{{ discussion_info.message_text|default_if_none:'No message yet'|truncatechars:25 }}</span>
+                            {# TODO: determine the timezone based on the user/device #}
+                            <time class="timeago text-secondary small col-auto me-auto"
+                                  id="latest-message-time-{{ discussion_info.discussion_id }}"
+                                  datetime="{{ discussion_info.message_created_at|timezone:"America/Montreal"|date:"c" }}"></time>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col d-flex flex-column p-0" id="current-chat">
+            <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3" id="chat-history">
+                <div class="align-items-center justify-content-center d-flex">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 px-3" id="message-box">
+                <form id="message-form">
+                    <div class="row">
+                        <div class="col">
+                            {{ message_form.text | as_crispy_field }}
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary" id="send-message">Send</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TODO: make sure messages dont get lost when switching while a new websocket message is being received
+        // TODO: make sure the websocket connection stays open for long periods of time (?)
+
+        /* Switching between chats */
+        const chatList = document.getElementById('chat-list');
+        const chatHistory = $('#chat-history');
+        const allChats = $('#chat-list a');
+        allChats.click(switch_chat);
+
+
+        /* WebSocket chat */
+        let currentDiscussionId = {{ discussion_id }};
+        const ws = new WebSocket(`ws://${window.location.host}/ws/discussion/`);
+        ws.onmessage = function (event) {
+            let data = JSON.parse(event.data);
+
+            if (data['type'] !== 'message') {
+                alert(`Invalid message received (${data})`);
+                return;
+            }
+
+            updateMostRecent(data['discussion_id'], data['message'], data['is_current_user']);
+
+            if (data['discussion_id'] !== currentDiscussionId) {
+                return;
+            }
+
+            let is_current_user = data['sender_id'] === {{ request.user.id }};
+
+            addMessageToChatHistory(data['message'], is_current_user, new Date());
+        }
+
+        const form = document.querySelector('#message-form');
+        const messageInput = document.querySelector('#message-text-input');
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const message = messageInput.value;
+            let data = {
+                'message': message,
+                'discussion_id': currentDiscussionId
+            };
+            ws.send(JSON.stringify(data));
+
+            messageInput.value = '';
+
+            // Note: we do not add the message to the chat history here, 
+            // because we are waiting for the websocket to send it back
+            // This serves as a confirmation that the message was sent
+        });
+
+        function addMessageToChatHistory(text, is_current_user, datetime) {
+            // TODO: add datetime to the message
+            const message = document.createElement('div');
+            let bgColor = is_current_user ? 'dodgerblue' : 'whitesmoke';
+            let textColor = is_current_user ? 'white' : 'black';
+            let justify = is_current_user ? 'justify-content-end' : 'justify-content-start';
+            message.classList.add('m-1', 'd-flex', justify);
+            message.innerHTML = `<p style="background-color: ${bgColor}; color: ${textColor}; max-width: min(75%, 650px); border-radius: 24px; padding: 8px 12px;" class="mb-0 text-break text-wrap align-content-center">${text}</p>`;
+            chatHistory.prepend(message);
+        }
+
+        function updateMostRecent(discussionId, message, isCurrentUser) {
+            // Update the latest message in the chat list
+            // let latestMessageSpan = $(`#latest-message-${discussionId}`); // commented out as this lags the IDE for some reason
+            let latestMessageSpan = $('#latest-message-' + discussionId);
+            let truncatedMessage = message.length > 25 ? message.substring(0, 25) + '...' : message;
+            latestMessageSpan.text(truncatedMessage);
+
+            // Update the time of the latest message
+            let latestMessageTime = $('#latest-message-time-' + discussionId);
+            latestMessageTime.timeago('update', new Date());
+
+            // Put the discussion at the top of the list
+            let discussion = $('#discussion-' + discussionId)[0];
+            chatList.prepend(discussion);
+        }
+
+        function switch_chat(event) {
+            // Prevent the default action and set the url
+            event.preventDefault();
+            const url = $(this).attr('href');
+            window.history.pushState('', '', url);
+
+            // Make the clicked chat active by changing the background color
+            allChats.removeClass('active');
+            $(this).addClass('active');
+
+            // Fetch chat history and parse the json response
+            fetch(url + 'messages/')
+                .then(response => response.json())
+                .then(data => {
+                    chatHistory.empty();
+                    data.messages.forEach(message => {
+                        addMessageToChatHistory(message['text'], message['is_current_user'], new Date(message['created_at']));
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+
+            // Set the discussion id
+            currentDiscussionId = $(this).data('discussionid');
+        }
+
+        // Make the Enter key submit the form
+        // Make alt, ctrl, shift + Enter add a new line
+        messageInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+                event.preventDefault();
+                form.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        $(document).ready(function () {
+            // Once the page is loaded, simulate a click on the first chat
+            // TODO: load with the page instead of simulating a click
+            $('#discussion-{{ discussion_id }}').click();
+
+            // initialize timeago
+            jQuery.timeago.settings.strings = {
+                prefixAgo: null,
+                prefixFromNow: null,
+                suffixAgo: "",
+                suffixFromNow: "",
+                seconds: "Now",
+                minute: "1m",
+                minutes: "%dm",
+                hour: "1h",
+                hours: "%dh",
+                day: "1d",
+                days: "%dd",
+                month: "1mo",
+                months: "%dmo",
+                year: "1yr",
+                years: "%dyr",
+                wordSeparator: " ",
+                numbers: []
+            };
+            $("time.timeago").timeago();
+
+        });
+    </script>
+{% endblock %}

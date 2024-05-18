@@ -13,75 +13,89 @@
     <link rel="stylesheet" href="{% static 'libraries/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'libraries/bootstrap-icons.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <!-- TODO: figure out the bestway to include these libraries (ex: end of body? CDN? etc...) -->
     <script src="{% static 'libraries/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'libraries/bootstrap.bundle.min.js' %}"></script>
+
+    {% block head %}
+    {% endblock %}
 </head>
-<body>
+<body class="bg-dark d-flex flex-column h-100">
 <!-- Navbar -->
-<nav class="navbar navbar-expand-sm bg-dark navbar-dark fixed-top">
+<nav class="navbar navbar-expand-sm bg-dark navbar-dark flex-shrink-1">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">Open Debate</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbar">
+            <!-- Left Side -->
             <ul class="navbar-nav">
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'debate_index' %}">Index</a>
                 </li>
             </ul>
-        </div>
-        <!-- Right Side with profile icon and dropdown -->
-        <div class="btn-group">
-            <a class="nav-link" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"
-               aria-expanded="false">
-                <div class="row gx-2">
-                    <div class="col-auto me-auto align-content-center">
-                    {# display user name #}
+            <!-- Right Side -->
+            <div class="btn-group ms-auto">
+                <a class="nav-link" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"
+                   aria-expanded="false">
+                    <div class="row gx-2">
+                        <div class="col-auto me-auto align-content-center">
+                            {# display user name #}
+                            {% if not user.is_authenticated %}
+                                {# if the user is not connected, display "Not Connected" #}
+                                <span class="text-white"><em>Not Connected</em></span>
+                            {% else %}
+                                {# if the user is connected, display the user's username #}
+                                <span class="text-white">{{ user.username }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-auto">
+                            {# Note that fs-3 is dynamic. This is why the header height seems to change very slightly #}
+                            {# when we change the size of the window manually. #}
+                            <i class="bi bi-person-circle text-white fs-3"></i>
+                        </div>
+                    </div>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
                     {% if not user.is_authenticated %}
-                        {# if the user is not connected, display "Not Connected" #}
-                        <span class="text-white"><em>Not Connected</em></span>
+                        {# if the user is not connected, provide options to register or login #}
+                        <a class="dropdown-item"
+                           href="{% url 'user_register' %}?next={{ request.GET.next|default:request.path }}">Register</a>
+                        <a class="dropdown-item"
+                           href="{% url 'user_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
                     {% else %}
-                        {# if the user is connected, display the user's username #}
-                        <span class="text-white">{{ user.username }}</span>
+                        {# if the user is connected, provide options #}
+                        <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
+                        <a class="dropdown-item" href="#">Profile</a>
+                        <a class="dropdown-item" href="#">Settings</a>
+                        <div class="dropdown-divider"></div>
+                        <form action="{% url 'user_logout' %}"
+                              method="post">
+                            {% csrf_token %}
+                            <button class="dropdown-item" type="submit">Logout</button>
+                        </form>
                     {% endif %}
-                    </div>
-                    <div class="col-auto">
-                        <i class="bi bi-person-circle text-white fs-3"></i>
-                    </div>
                 </div>
-            </a>
-            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                {% if not user.is_authenticated %}
-                    {# if the user is not connected, provide options to register or login #}
-                    <a class="dropdown-item" href="{% url 'user_register' %}?next={{ request.GET.next|default:request.path }}">Register</a>
-                    <a class="dropdown-item" href="{% url 'user_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
-                {% else %}
-                    {# if the user is connected, provide options to view profile, settings and logout #}
-                    <a class="dropdown-item" href="#">Profile</a>
-                    <a class="dropdown-item" href="#">Settings</a>
-                    <div class="dropdown-divider"></div>
-                    <form action="{% url 'user_logout' %}?next={{ request.GET.next|default:request.path }}" method="post">
-                        {% csrf_token %}
-                        <button class="dropdown-item" type="submit">Logout</button>
-                    </form>
-                {% endif %}
             </div>
         </div>
     </div>
 </nav>
 
 <!-- Content -->
-<div class="content container-fluid" style="margin: 80px auto">
+<div id="main-content" class="container-fluid bg-white flex-grow-1">
     {% block content %}
     {% endblock %}
 </div>
 
 <!-- Footer -->
-<footer>
-    <div class="container-fluid bg-dark text-white text-center p-3 h">
-        <span>&copy; 2024 Open Debate</span>
-    </div>
-</footer>
+{% if not remove_footer %}
+    <footer>
+        <div class="container-fluid bg-dark text-white text-center p-3 h">
+            <span>&copy; 2024 Open Debate</span>
+        </div>
+    </footer>
+{% endif %}
 </body>
 </html>

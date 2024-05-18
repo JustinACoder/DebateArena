@@ -21,3 +21,15 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author} on \"{self.debate.title}\""
+
+
+class Stance(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
+    stance = models.BooleanField()  # False for "against", True for "for" # TODO: think of a more complex stance system
+
+    class Meta:
+        unique_together = ('user', 'debate')  # A user can only have one stance on a debate
+
+    def __str__(self):
+        return f"Stance of {self.user} on \"{self.debate.title}\""
