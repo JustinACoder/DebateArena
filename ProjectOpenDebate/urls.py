@@ -16,11 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-import debate.views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('debate.urls')),
     path('', include('users.urls')),
+    path('chat/', include('discussion.urls')),
     path("__debug__/", include("debug_toolbar.urls")),
 ]

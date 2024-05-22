@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Websocket/Channels test</h1>
+    <form action="/send" method="post">
+        <label for="message">Message:</label>
+        <input type="text" id="message" name="message">
+        <button type="submit">Send</button>
+    </form>
+    <div id="message_container">
+    </div>
+    <script>
+        const messageContainer = document.getElementById('message_container');
+        const ws = new WebSocket(`ws://${window.location.host}/ws/chat/example/`);
+        ws.onmessage = function (event) {
+            let data = JSON.parse(event.data);
+            if (data.type !== 'message') {
+                console.log(data);
+            }
+            
+            // here we know that the data is a message
+            const messageDiv = document.createElement('div');
+            const messageSender = document.createElement('strong');
+            messageSender.innerText = data.sender;
+            messageDiv.appendChild(messageSender);
+            messageDiv.innerHTML += ': ';
+            const messageText = document.createElement('span');
+            messageText.innerText = data.message;
+            messageDiv.appendChild(messageText);
+            
+            if (data['is_system_message'] === true) {
+                messageDiv.style.color = 'blue';
+            }
+            messageContainer.appendChild(messageDiv);
+        }
+        
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const message = document.getElementById('message').value;
+            ws.send(JSON.stringify({message: message}));
+        });
+    </script>
+
+</body>
+</html>
