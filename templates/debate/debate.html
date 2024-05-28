@@ -43,12 +43,11 @@
             </button>
         </div>
     {% else %}
-        <p>You must be connected to set your stance. Please <a href="{% url 'user_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+        <p>You must be connected to set your stance. Please <a href="{% url 'account_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
 
     <!-- Debate with someone -->
-    <br>
     <h2>Debate with Someone</h2>
     {% if request.user.is_authenticated %}
         <form method="post" id="request-discussion-form">
@@ -66,8 +65,8 @@
         </form>
     {% else %}
         <p>You must be connected to debate with someone. Please <a
-                href="{% url 'user_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+                href="{% url 'account_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
 
     <!-- Add comments -->
@@ -82,12 +81,11 @@
             <button type="submit" class="btn btn-primary">Add Comment</button>
         </form>
     {% else %}
-        <p>You must be connected to add a comment. Please <a href="{% url 'user_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+        <p>You must be connected to add a comment. Please <a href="{% url 'account_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
 
     <!-- Display comments -->
-    <hr>
     <h2>Comments</h2>
     {# If there are no comments, display a message #}
     {% if comments|length == 0 %}
