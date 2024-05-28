@@ -14,6 +14,7 @@ from pathlib import Path
 from django.contrib import messages
 import os
 import environ
+from django.urls import reverse
 
 env = environ.Env()
 
@@ -43,12 +44,17 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'daphne',
     'channels',
+    'django_extensions',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    #'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'crispy_forms',
     'crispy_bootstrap5',
@@ -72,11 +78,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
-
-LOGIN_REDIRECT_URL = 'debate_index'
 
 INTERNAL_IPS = [
     "127.0.0.1",
@@ -134,6 +139,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 LANGUAGE_CODE = 'en-us'
@@ -160,3 +170,24 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
+
+# Allauth settings
+ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '[DebateArena] '
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_CHANGE_EMAIL = True
+ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
+ACCOUNT_USERNAME_VALIDATORS = 'users.validators.username_validators'
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
+
+# Email backend settings
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_SUBJECT_PREFIX = '[DebateArena] '
+DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
+
+# Admins
+ADMINS = [
+    ('Admin', env("ADMIN_EMAIL", default="admin@gmail.com"))
+]

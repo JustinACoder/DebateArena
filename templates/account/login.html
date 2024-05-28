@@ -9,5 +9,5 @@
         {{ form|crispy }}
         <button type="submit" class="btn btn-primary">Login</button>
     </form>
-    <p>Don't have an account? <a href="{% url 'user_register' %}?next={{ request.GET.next|default:'/' }}">Register</a></p>
+    <p>Don't have an account? <a href="{% url 'account_signup' %}?next={{ request.GET.next|default:'/' }}">Register</a></p>
 {% endblock %}

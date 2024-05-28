@@ -22,25 +22,29 @@ def index(request):
 
 
 def debate(request, debate_title):
-    debate_query = Debate.objects.select_related('author').annotate(
-        user_stance=Subquery(
-            Stance.objects.filter(user=request.user, debate=OuterRef('pk')).values('stance')[:1]
-        ),
-        has_requested_for=Exists(
-            DiscussionRequest.objects.filter(
-                requester=request.user,
-                debate=OuterRef('pk'),
-                stance_wanted=True
-            )
-        ),
-        has_requested_against=Exists(
-            DiscussionRequest.objects.filter(
-                requester=request.user,
-                debate=OuterRef('pk'),
-                stance_wanted=False
+    debate_query = Debate.objects.select_related('author').prefetch_related('comment_set', 'comment_set__author')
+
+    # If the user is authenticated, annotate the query with additional information
+    if request.user.is_authenticated:
+        debate_query = debate_query.annotate(
+            user_stance=Subquery(
+                Stance.objects.filter(user=request.user, debate=OuterRef('pk')).values('stance')[:1]
+            ),
+            has_requested_for=Exists(
+                DiscussionRequest.objects.filter(
+                    requester=request.user,
+                    debate=OuterRef('pk'),
+                    stance_wanted=True
+                )
+            ),
+            has_requested_against=Exists(
+                DiscussionRequest.objects.filter(
+                    requester=request.user,
+                    debate=OuterRef('pk'),
+                    stance_wanted=False
+                )
             )
         )
-    ).prefetch_related('comment_set', 'comment_set__author')
 
     debate_instance = get_object_or_404(debate_query, title=debate_title)
 
