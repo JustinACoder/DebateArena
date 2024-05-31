@@ -3,5 +3,5 @@ from django.contrib.auth.views import LoginView, PasswordResetView
 import users.views
 
 urlpatterns = [
-    path('profile/', users.views.account_profile, name='account_profile'),
+    path('profile/', users.views.account_settings, name='account_settings'),
 ]

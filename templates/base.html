@@ -68,7 +68,7 @@
                     {% else %}
                         {# if the user is connected, provide options #}
                         <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
-                        <a class="dropdown-item" href="{% url 'account_profile' %}">Profile</a>
+                        <a class="dropdown-item" href="{% url 'account_settings' %}">Settings</a>
                         <div class="dropdown-divider"></div>
                         <form action="{% url 'account_logout' %}"
                               method="post">

@@ -7,7 +7,7 @@ from users.forms import ViewEditUserForm
 
 
 @login_required
-def account_profile(request):
+def account_settings(request):
     # Get the user object
     user = request.user  # type: User
 
@@ -39,4 +39,4 @@ def account_profile(request):
         'stats': stats,
     }
 
-    return render(request, 'user/profile.html', context)
+    return render(request, 'user/settings.html', context)
