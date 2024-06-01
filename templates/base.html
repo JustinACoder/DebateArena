@@ -67,6 +67,7 @@
                            href="{% url 'account_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
                     {% else %}
                         {# if the user is connected, provide options #}
+                        <a class="dropdown-item" href="{% url 'account_profile' request.user.username %}">Profile</a>
                         <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
                         <a class="dropdown-item" href="{% url 'account_settings' %}">Settings</a>
                         <div class="dropdown-divider"></div>
