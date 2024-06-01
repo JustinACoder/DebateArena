@@ -5,13 +5,8 @@
     <h1>Profile</h1>
     <ul class="nav nav-tabs" id="profile-tab" role="tablist">
         <li class="nav-item">
-            <button class="nav-link active" id="viewedit-tab" data-bs-toggle="tab" data-bs-target="#viewedit"
-                    type="button" role="tab" aria-controls="viewedit" aria-selected="true">View/Edit
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="stances-tab" data-bs-toggle="tab" data-bs-target="#stances" type="button"
-                    role="tab" aria-controls="stances" aria-selected="false">Stances
+            <button class="nav-link active" id="stances-tab" data-bs-toggle="tab" data-bs-target="#stances" type="button"
+                    role="tab" aria-controls="stances" aria-selected="true">Stances
             </button>
         </li>
         <li class="nav-item">
@@ -27,19 +22,7 @@
         </li>
     </ul>
     <div class="tab-content my-2" id="profile-tab-content">
-        <div class="tab-pane fade show active" id="viewedit" role="tabpanel" aria-labelledby="viewedit-tab">
-            <h2>View/Edit</h2>
-            <form method="post" action="#">
-                {% csrf_token %}
-                {{ user_form|crispy }}
-                <button type="submit" class="btn btn-primary">Save</button>
-            </form>
-            <!-- Small notice in case the user wants to reset their password -->
-            <p class="text-muted">If you want to change your password, please <a
-                    href="{% url 'account_change_password' %}">click
-                here</a></p>
-        </div>
-        <div class="tab-pane fade" id="stances" role="tabpanel" aria-labelledby="stances-tab">
+        <div class="tab-pane fade show active" id="stances" role="tabpanel" aria-labelledby="stances-tab">
             <h2>Stances</h2>
             {% if stances %}
                 <ul>
@@ -50,7 +33,7 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p>You have not taken any stances yet</p>
+                <p>No stances taken yet</p>
             {% endif %}
         </div>
         <div class="tab-pane fade" id="pending-requests" role="tabpanel" aria-labelledby="pending-requests-tab">
@@ -58,7 +41,7 @@
             {% if pending_requests %}
                 <ul>
                     {% for request in pending_requests %}
-                        <li>You are looking for someone <strong>{{ request.stance_wanted|yesno:"for,against" }}</strong>
+                        <li>Looking for someone <strong>{{ request.stance_wanted|yesno:"for,against" }}</strong>
                             in
                             the debate <a
                                     href="{% url 'debate' request.debate.title %}"><strong>{{ request.debate.title }}</strong></a>
@@ -66,7 +49,7 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p>You have no pending discussion requests</p>
+                <p>No pending discussion requests</p>
             {% endif %}
         </div>
         <div class="tab-pane fade" id="stats" role="tabpanel" aria-labelledby="stats-tab">

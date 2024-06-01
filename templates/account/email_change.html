@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load crispy_forms_filters %}
+
+{% block content %}
+    <h1>Change your Email</h1>
+    {% include 'messages_display.html' %}
+    <form method="post">
+        {% csrf_token %}
+        <p><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
+        {% if new_emailaddress %}
+            <p><strong>New email:</strong> {{ new_emailaddress.email }}</p>
+            <p>
+                A confirmation email has been sent to {{ new_emailaddress.email }}. You must confirm this address to
+                complete this change.
+                <br>
+                <button form="pending-email" name="action_send" type="submit" class="btn btn-primary">Resend
+                    Confirmation Email
+                </button>
+                <button form="pending-email" name="action_remove" type="submit"
+                        class="btn btn-danger">Cancel Email Change
+                </button>
+            </p>
+        {% else %}
+            <p>Enter your new email address below and we'll send you a confirmation email.</p>
+            {{ form|crispy }}
+            <button type="submit" name="action_add" class="btn btn-primary">Change Email</button>
+        {% endif %}
+    </form>
+    {% if new_emailaddress %}
+        <form style="display: none"
+              id="pending-email"
+              method="post">
+            {% csrf_token %}
+            <input type="hidden" name="email" value="{{ new_emailaddress.email }}">
+        </form>
+    {% endif %}
+{% endblock %}
