@@ -5,77 +5,56 @@
     <h1>Settings</h1>
     <ul class="nav nav-tabs" id="settings-tab" role="tablist">
         <li class="nav-item">
-            <button class="nav-link active" id="viewedit-tab" data-bs-toggle="tab" data-bs-target="#viewedit"
-                    type="button" role="tab" aria-controls="viewedit" aria-selected="true">View/Edit
+            <button class="nav-link active" id="account-tab" data-bs-toggle="tab" data-bs-target="#account"
+                    type="button" role="tab" aria-controls="account" aria-selected="true">Account
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" id="stances-tab" data-bs-toggle="tab" data-bs-target="#stances" type="button"
-                    role="tab" aria-controls="stances" aria-selected="false">Stances
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="pending-requests-tab" data-bs-toggle="tab" data-bs-target="#pending-requests"
-                    type="button" role="tab" aria-controls="pending-requests" aria-selected="false">Pending Discussion
-                Requests
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button"
-                    role="tab" aria-controls="stats" aria-selected="false">Statistics
+            <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile"
+                    type="button" role="tab" aria-controls="profile" aria-selected="false">Profile
             </button>
         </li>
     </ul>
     <div class="tab-content my-2" id="settings-tab-content">
-        <div class="tab-pane fade show active" id="viewedit" role="tabpanel" aria-labelledby="viewedit-tab">
-            <h2>View/Edit</h2>
-            <form method="post" action="#">
-                {% csrf_token %}
-                {{ user_form|crispy }}
-                <button type="submit" class="btn btn-primary">Save</button>
-            </form>
-            <!-- Small notice in case the user wants to reset their password -->
-            <p class="text-muted">If you want to change your password, please <a
-                    href="{% url 'account_change_password' %}">click
-                here</a></p>
+        <div class="tab-pane fade show active w-50" id="account" role="tabpanel" aria-labelledby="account-tab">
+            <h2>Account Settings</h2>
+            <hr>
+            <div class="row align-items-center">
+                <div class="col ms-auto">
+                    <span class="fw-bold">Username</span><br>
+                    <span class="text-muted">{{ user.username }}</span>
+                </div>
+                <div class="col col-auto me-auto">
+                    <span class="text-muted">You cannot change your username</span>
+                </div>
+            </div>
+            <hr>
+            <div class="row align-items-center">
+                <div class="col ms-auto">
+                    <span class="fw-bold">Email</span><br>
+                    <span class="text-muted">{{ user.email }}</span>
+                </div>
+                <div class="col col-auto me-auto">
+                    <a href="{% url 'account_email' %}" class="btn btn-primary">Edit</a>
+                </div>
+            </div>
+            <hr>
+            <div class="row align-items-center">
+                <div class="col ms-auto">
+                    <span class="fw-bold">Password</span><br>
+                    <span class="text-muted">**********</span>
+                </div>
+                <div class="col col-auto me-auto">
+                    <a href="{% url 'account_change_password' %}" class="btn btn-primary">Edit</a>
+                </div>
+            </div>
+            <hr>
         </div>
-        <div class="tab-pane fade" id="stances" role="tabpanel" aria-labelledby="stances-tab">
-            <h2>Stances</h2>
-            {% if stances %}
-                <ul>
-                    {% for stance in stances %}
-                        <li>You are <strong>{{ stance.stance|yesno:"for,against" }}</strong> in the debate
-                            <a href="{% url 'debate' stance.debate.title %}"><strong>{{ stance.debate.title }}</strong></a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>You have not taken any stances yet</p>
-            {% endif %}
-        </div>
-        <div class="tab-pane fade" id="pending-requests" role="tabpanel" aria-labelledby="pending-requests-tab">
-            <h2>Pending Discussion Requests</h2>
-            {% if pending_requests %}
-                <ul>
-                    {% for request in pending_requests %}
-                        <li>You are looking for someone <strong>{{ request.stance_wanted|yesno:"for,against" }}</strong>
-                            in
-                            the debate <a
-                                    href="{% url 'debate' request.debate.title %}"><strong>{{ request.debate.title }}</strong></a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>You have no pending discussion requests</p>
-            {% endif %}
-        </div>
-        <div class="tab-pane fade" id="stats" role="tabpanel" aria-labelledby="stats-tab">
-            <h2>Statistics</h2>
-            <p>Number of Stances: {{ stats.stance_count }}</p>
-            <p>Number of Pending Discussion Requests: {{ stats.pending_request_count }}</p>
-            <p>Number of Discussions: {{ stats.discussion_count }}</p>
-            <p>Number of Messages: {{ stats.message_count }}</p>
-            <p>Number of Comments: {{ stats.comment_count }}</p>
+        <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+            <h2>Profile Information</h2>
+            <hr>
+            TODO
+            <hr>
         </div>
     </div>
 {% endblock %}
