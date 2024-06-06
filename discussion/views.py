@@ -62,7 +62,8 @@ def specific_discussion(request, discussion_id):
             """
             SELECT *
             FROM (SELECT dd.id                                                                               as discussion_id,
-                         dd.debate_id                                                                        as debate_title,
+                         dd.debate_id                                                                        as debate_id,
+                         db.title                                                                            as debate_title,
                          dd.created_at                                                                       as discussion_created_at,
                          dm.id                                                                               as message_id,
                          dm.text                                                                             as message_text,
@@ -77,6 +78,7 @@ def specific_discussion(request, discussion_id):
                            JOIN auth_user p1 ON dd.participant1_id = p1.id
                            JOIN auth_user p2 ON dd.participant2_id = p2.id
                            LEFT JOIN discussion_message dm ON dd.id = dm.discussion_id
+                           JOIN debate_debate db ON dd.debate_id = db.id
                   WHERE (dd.participant1_id = %s OR dd.participant2_id = %s)) as sub
             WHERE message_id = first_message_id
                OR first_message_id IS NULL

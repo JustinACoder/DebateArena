@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     #'allauth.socialaccount.providers.google',
     'debug_toolbar',
+    'voting',
     'crispy_forms',
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
@@ -183,7 +184,7 @@ ACCOUNT_USERNAME_VALIDATORS = 'users.validators.username_validators'
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
 
 # Email backend settings
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # TODO: Change to real email backend in production
 EMAIL_SUBJECT_PREFIX = '[DebateArena] '
 DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
 
