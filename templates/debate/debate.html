@@ -63,12 +63,12 @@
     {% if request.user.is_authenticated %}
         <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
              aria-label="Set Your Stance">
-            <button type="button" class="btn btn-success w-100 stance {% if user_stance.stance %}active{% endif %}"
+            <button type="button" class="btn btn-success w-100 stance {% if stance.stance %}active{% endif %}"
                     id="stance-for-btn" data-stance="for">For
             </button>
             <button type="button" class="btn btn-primary" id="stance-reset-btn">Reset</button>
             <button type="button"
-                    class="btn btn-danger w-100 stance {% if user_stance.stance == False %}active{% endif %}"
+                    class="btn btn-danger w-100 stance {% if stance.stance == False %}active{% endif %}"
                     id="stance-against-btn" data-stance="against">Against
             </button>
         </div>
