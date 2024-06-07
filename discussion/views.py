@@ -25,9 +25,22 @@ def dictfetchall(cursor):
 @login_required
 def discussion_default(request):
     # Get the most recent discussion for the current user
-    most_recent_discussion_id = (Message.objects.filter(
-        Q(discussion__participant1=request.user) | Q(discussion__participant2=request.user)
-    ).order_by('-created_at').values_list('discussion_id', flat=True).first())
+    # most_recent_discussion_id = (Message.objects.filter(
+    #     Q(discussion__participant1=request.user) | Q(discussion__participant2=request.user)
+    # ).order_by('-created_at').values_list('discussion_id', flat=True).first())
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT dd.id
+            FROM discussion_discussion dd
+                     LEFT JOIN discussion_message dm ON dd.id = dm.discussion_id
+            WHERE dd.participant1_id = %s OR dd.participant2_id = %s
+            ORDER BY COALESCE(dm.created_at, dd.created_at) DESC
+            LIMIT 1;
+            """,
+            [request.user.id, request.user.id]
+        )
+        most_recent_discussion_id = cursor.fetchone()[0]
 
     return specific_discussion(request, most_recent_discussion_id)
 
