@@ -44,12 +44,12 @@
                        class="btn btn-light w-100 text-start my-2">
                         <strong>{{ discussion_info.debate_title }}</strong><br>
                         <span class="fst-italic">
-                    {% if request.user.id == discussion_info.participant1_id %}
-                        {{ discussion_info.participant2_username }}
-                    {% else %}
-                        {{ discussion_info.participant1_username }}
-                    {% endif %}
-                    </span><br>
+                        {% if request.user.id == discussion_info.participant1_id %}
+                            {{ discussion_info.participant2_username }}
+                        {% else %}
+                            {{ discussion_info.participant1_username }}
+                        {% endif %}
+                        </span><br>
                         <div class="row">
                             <span id="latest-message-{{ discussion_info.discussion_id }}"
                                   class="fst-italic text-secondary small col">{{ discussion_info.message_text|default_if_none:'No message yet'|truncatechars:25 }}</span>
@@ -97,17 +97,41 @@
 
 
         /* WebSocket chat */
+        {# TODO: put reusable sections into a file that we can include #}
         let currentDiscussionId = {{ discussion_id }};
-        const ws = new WebSocket(`ws://${window.location.host}/ws/discussion/`);
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
         ws.onmessage = function (event) {
-            let data = JSON.parse(event.data);
+            let wsMessage = JSON.parse(event.data);
 
-            if (data['type'] !== 'message') {
-                alert(`Invalid message received (${data})`);
+            // Check if there was an error
+            if (wsMessage['status'] === 'error') {
+                alert(`Error (${wsMessage['event_type']}): ${wsMessage['message']}`);
                 return;
             }
 
-            updateMostRecent(data['discussion_id'], data['message'], data['is_current_user']);
+            // Give the message to the appropriate handler
+            switch (wsMessage['event_type']) {
+                case 'discussion.new_message':
+                    handle_new_message(wsMessage['data']);
+                    break;
+                case 'discussion.new_discussion':
+                    handle_new_discussion(wsMessage['data']);
+                default:
+                    alert(`This event type is not handled: ${wsMessage['event_type']}`);
+            }
+        }
+
+        function encodehtml(s) {
+            return $('<textarea />').text(s).html();
+        }
+
+        function decodehtml(s) {
+            return $('<textarea />').html(s).text();
+        }
+
+        function handle_new_message(data) {
+            updateMostRecent(data['discussion_id'], data['message']);
 
             if (data['discussion_id'] !== currentDiscussionId) {
                 return;
@@ -115,17 +139,44 @@
 
             let is_current_user = data['sender_id'] === {{ request.user.id }};
 
+            {# TODO: should we set the datetime using the server time which would be sent in the message? #}
             addMessageToChatHistory(data['message'], is_current_user, new Date());
+        }
+
+        function handle_new_discussion(data) {
+            // Add the new discussion to the chat list
+            let discussionID = data['discussion_id'];
+            let chatURL = `{% url 'specific_discussion' 0 %}`.replace('0', discussionID);
+            let safeTitle = encodehtml(data['debate_title']);
+            let otherParticipant = data['participant1_id'] === {{ request.user.id }} ? data['participant2_username'] : data['participant1_username'];
+            let safeOtherParticipant = encodehtml(otherParticipant);
+            let new_chat_html = `
+                <a href="${chatURL}" data-discussionid="${discussionID}" id="discussion-${discussionID}"
+                   data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
+                   class="btn btn-light w-100 text-start my-2">
+                    <strong>${safeTitle}</strong><br>
+                    <span class="fst-italic">${safeOtherParticipant}</span><br>
+                    <div class="row">
+                        <span id="latest-message-${discussionID}" class="fst-italic text-secondary small col">No message yet</span>
+                        <time class="timeago text-secondary small col-auto me-auto" id="latest-message-time-${discussionID}"></time>
+                    </div>
+                </a>
+            `;
+            
+            chatList.prepend(new_chat_html);
         }
 
         const form = document.querySelector('#message-form');
         const messageInput = document.querySelector('#message-text-input');
         form.addEventListener('submit', function (event) {
             event.preventDefault();
-            const message = messageInput.value;
+            let message = messageInput.value;
             let data = {
-                'message': message,
-                'discussion_id': currentDiscussionId
+                'event_type': 'discussion.new_message',
+                'data': {
+                    'message': message,
+                    'discussion_id': currentDiscussionId
+                },
             };
             ws.send(JSON.stringify(data));
 
@@ -142,12 +193,13 @@
             let bgColor = is_current_user ? 'dodgerblue' : 'whitesmoke';
             let textColor = is_current_user ? 'white' : 'black';
             let justify = is_current_user ? 'justify-content-end' : 'justify-content-start';
+            let safeText = encodehtml(text);
             message.classList.add('m-1', 'd-flex', justify);
-            message.innerHTML = `<p style="background-color: ${bgColor}; color: ${textColor}; max-width: min(75%, 650px); border-radius: 24px; padding: 8px 12px;" class="mb-0 text-break text-wrap align-content-center">${text}</p>`;
+            message.innerHTML = `<p style="background-color: ${bgColor}; color: ${textColor}; max-width: min(75%, 650px); border-radius: 24px; padding: 8px 12px;" class="mb-0 text-break text-wrap align-content-center">${safeText}</p>`;
             chatHistory.prepend(message);
         }
 
-        function updateMostRecent(discussionId, message, isCurrentUser) {
+        function updateMostRecent(discussionId, message) {
             // Update the latest message in the chat list
             // let latestMessageSpan = $(`#latest-message-${discussionId}`); // commented out as this lags the IDE for some reason
             let latestMessageSpan = $('#latest-message-' + discussionId);
