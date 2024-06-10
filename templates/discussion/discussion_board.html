@@ -90,7 +90,7 @@
         // TODO: make sure the websocket connection stays open for long periods of time (?)
 
         /* Switching between chats */
-        const chatList = document.getElementById('chat-list');
+        const chatList = $('#chat-list');
         const chatHistory = $('#chat-history');
         const allChats = $('#chat-list a');
         allChats.click(switch_chat);
@@ -103,22 +103,26 @@
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
         ws.onmessage = function (event) {
             let wsMessage = JSON.parse(event.data);
-
+            
+            let payload = wsMessage['payload'];
+            
             // Check if there was an error
-            if (wsMessage['status'] === 'error') {
-                alert(`Error (${wsMessage['event_type']}): ${wsMessage['message']}`);
+            if (payload['status'] === 'error') {
+                alert(`Error (${payload['event_type']}): ${payload['message']}`);
                 return;
             }
 
             // Give the message to the appropriate handler
-            switch (wsMessage['event_type']) {
-                case 'discussion.new_message':
-                    handle_new_message(wsMessage['data']);
+            let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
+            switch (handler_key) {
+                case 'message.new_message':
+                    handle_new_message(payload['data']);
                     break;
                 case 'discussion.new_discussion':
-                    handle_new_discussion(wsMessage['data']);
+                    handle_new_discussion(payload['data']);
+                    break;
                 default:
-                    alert(`This event type is not handled: ${wsMessage['event_type']}`);
+                    alert(`This event type is not handled: ${handler_key}`);
             }
         }
 
@@ -172,19 +176,22 @@
             event.preventDefault();
             let message = messageInput.value;
             let data = {
-                'event_type': 'discussion.new_message',
-                'data': {
-                    'message': message,
-                    'discussion_id': currentDiscussionId
-                },
+                'stream': 'message',
+                'payload': {
+                    'event_type': 'new_message',
+                    'data': {
+                        'message': message,
+                        'discussion_id': currentDiscussionId
+                    },
+                }
             };
             ws.send(JSON.stringify(data));
 
             messageInput.value = '';
 
-            // Note: we do not add the message to the chat history here, 
-            // because we are waiting for the websocket to send it back
-            // This serves as a confirmation that the message was sent
+            {# Note: we do not add the message to the chat history here, #}
+            {# because we are waiting for the websocket to send it back #}
+            {# This serves as a confirmation that the message was sent #}
         });
 
         function addMessageToChatHistory(text, is_current_user, datetime) {

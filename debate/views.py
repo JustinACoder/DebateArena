@@ -178,11 +178,16 @@ def request_discussion(request, debate_title):
     # If there was a matching request, create a discussion and return the discussion page
     if earliest_matching_discussion_request:
         # Create a discussion
+        participant1 = earliest_matching_discussion_request.requester
+        participant2 = request.user
         discussion_instance = Discussion.objects.create(
             debate=debate_instance,
-            participant1=earliest_matching_discussion_request.requester,
-            participant2=request.user
+            participant1=participant1,
+            participant2=participant2
         )
+
+        # Notify the participants about the new discussion
+        discussion_instance.notify_participants()
 
         # Redirect to the discussion page
         return redirect(specific_discussion, discussion_instance.id)
@@ -228,5 +233,3 @@ def vote(request, debate_title):
 
     # Return the new score
     return JsonResponse(new_score_dict)
-
-
