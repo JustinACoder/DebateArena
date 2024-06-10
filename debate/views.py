@@ -56,10 +56,12 @@ def debate(request, debate_title):
         comment_form = CommentForm()
 
     # Get the user's stance on the debate
-    user_stance = Stance.objects.filter(user=request.user, debate=debate_instance).first()
+    # Note we check using the user_id instead of user since it could be AnonymousUser (not authenticated)
+    user_stance = Stance.objects.filter(user_id=request.user.id, debate=debate_instance).first()
 
     # Get the user's discussion requests on the debate
-    user_discussion_requests = DiscussionRequest.objects.filter(requester=request.user, debate=debate_instance)
+    # Note we check using the user_id instead of user since it could be AnonymousUser (not authenticated)
+    user_discussion_requests = DiscussionRequest.objects.filter(requester_id=request.user.id, debate=debate_instance)
     has_requested_for = user_discussion_requests.filter(stance_wanted=True).exists()
     has_requested_against = user_discussion_requests.filter(stance_wanted=False).exists()
 
@@ -85,7 +87,7 @@ def debate(request, debate_title):
     # Annotate the comments with the vote information
     for comment in comments:
         key = str(comment.id)
-        comment.vote = comment_votes.get(key, None)
+        comment.vote = comment_votes.get(key)
         comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
 
     # Define the context to be passed to the template
@@ -107,7 +109,7 @@ def set_stance(request, debate_title):
     debate_instance = get_object_or_404(Debate, title=debate_title)
 
     # Check that the request contains the necessary data
-    stance = request.POST.get('stance', None)
+    stance = request.POST.get('stance')
     if stance not in ['for', 'against', 'reset']:
         return HttpResponseBadRequest()
 
@@ -127,7 +129,7 @@ def set_stance(request, debate_title):
 @login_required
 def request_discussion(request, debate_title):
     # Check that the wanted stance is valid
-    stance_wanted = request.GET.get('stance_wanted', None)
+    stance_wanted = request.GET.get('stance_wanted')
     if stance_wanted not in ['for', 'against']:
         return HttpResponseBadRequest()
     stance_wanted_bool = stance_wanted == 'for'
@@ -176,11 +178,16 @@ def request_discussion(request, debate_title):
     # If there was a matching request, create a discussion and return the discussion page
     if earliest_matching_discussion_request:
         # Create a discussion
+        participant1 = earliest_matching_discussion_request.requester
+        participant2 = request.user
         discussion_instance = Discussion.objects.create(
             debate=debate_instance,
-            participant1=earliest_matching_discussion_request.requester,
-            participant2=request.user
+            participant1=participant1,
+            participant2=participant2
         )
+
+        # Notify the participants about the new discussion
+        discussion_instance.notify_participants()
 
         # Redirect to the discussion page
         return redirect(specific_discussion, discussion_instance.id)
@@ -207,7 +214,7 @@ def vote(request, debate_title):
     debate_instance = get_object_or_404(Debate, title=debate_title)
 
     # Ensure that the direction is present and valid
-    direction = request.POST.get('direction', None)
+    direction = request.POST.get('direction')
     if direction not in ['-1', '0', '1']:
         return HttpResponseBadRequest()
     direction = int(direction)
@@ -226,5 +233,3 @@ def vote(request, debate_title):
 
     # Return the new score
     return JsonResponse(new_score_dict)
-
-
