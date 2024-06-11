@@ -252,67 +252,72 @@
         {# TODO: cleanup, this is a bit unreadable and hacky #}
         // When the user clicks on a vote button
         voteBtns.click(function () {
-            let direction = $(this).data('vote');
-            let isAlreadySelected = $(this).hasClass('selected');
-            let thisButton = $(this);
+            {% if not request.user.is_authenticated %}
+                {# TODO: alert is ugly figure out something better (sign in popup?) #}
+                alert('You must be connected to vote.');
+                // Untoggle the button
+                $(this).button('toggle');
+            {% else %}
+                let direction = $(this).data('vote');
+                let isAlreadySelected = $(this).hasClass('selected');
+                let thisButton = $(this);
 
-            // If the button is already active, remove the vote
-            if (isAlreadySelected) {
-                direction = 0;
-            }
-
-            // Define the data to send to the server
-            let data = {
-                direction: direction,
-                csrfmiddlewaretoken: '{{ csrf_token }}'
-            };
-
-            // Add comment_id if it exists
-            let comment_id = thisButton.data('comment-id');
-            if (comment_id) {
-                data.comment_id = comment_id;
-            }
-
-            // Send the vote to the server
-            $.post(
-                "{% url 'vote' debate.title %}",
-                data
-            ).done(function (data) {
-                // Determine which score to update
-                let score;
-                if (comment_id) {
-                    score = $('#comment-' + comment_id + '-score');
-                } else {
-                    score = debateVoteScore;
-                }
-
-                // Update the score
-                score.text(data.score);
-
-                // Untoggle the other button if it was toggled and unselect it
-                let otherButton = thisButton.parent().parent().find('.btn').not(thisButton); {# TODO: wth is this? We need to change the implementation so that its more robust #}
-                if (otherButton.hasClass('selected')) {
-                    otherButton.button('toggle');
-                    // remove the selected class
-                    otherButton.removeClass('selected');
-                }
-
-                // Make the current button if it was not already selected
-                // Otherwise, remove the selected class
+                // If the button is already active, remove the vote
                 if (isAlreadySelected) {
-                    thisButton.removeClass('selected');
-                } else {
-                    thisButton.addClass('selected');
+                    direction = 0;
                 }
-            }).fail(function (data) {
-                // Untoggle the button if the vote failed
-                thisButton.button('toggle');
 
-                alert('An error occurred. Please try again. Details: ' + data.responseText);
-            });
+                // Define the data to send to the server
+                let data = {
+                    direction: direction,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                };
 
+                // Add comment_id if it exists
+                let comment_id = thisButton.data('comment-id');
+                if (comment_id) {
+                    data.comment_id = comment_id;
+                }
+
+                // Send the vote to the server
+                $.post(
+                    "{% url 'vote' debate.title %}",
+                    data
+                ).done(function (data) {
+                    // Determine which score to update
+                    let score;
+                    if (comment_id) {
+                        score = $('#comment-' + comment_id + '-score');
+                    } else {
+                        score = debateVoteScore;
+                    }
+
+                    // Update the score
+                    score.text(data.score);
+
+                    // Untoggle the other button if it was toggled and unselect it
+                    let otherButton = thisButton.parent().parent().find('.btn').not(thisButton);
+                    {# TODO: wth is this? We need to change the implementation so that its more robust #}
+                    if (otherButton.hasClass('selected')) {
+                        otherButton.button('toggle');
+                        // remove the selected class
+                        otherButton.removeClass('selected');
+                    }
+
+                    // Make the current button if it was not already selected
+                    // Otherwise, remove the selected class
+                    if (isAlreadySelected) {
+                        thisButton.removeClass('selected');
+                    } else {
+                        thisButton.addClass('selected');
+                    }
+                }).fail(function (data) {
+                    // Untoggle the button if the vote failed
+                    thisButton.button('toggle');
+
+                    alert('An error occurred. Please try again. Details: ' + data.responseText);
+                });
+            {% endif %}
         });
-
-
     </script>
 {% endblock %}
