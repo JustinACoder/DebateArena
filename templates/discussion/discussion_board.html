@@ -100,6 +100,7 @@
         const chatList = $('#chat-list');
         const chatHistory = $('#chat-history');
         const allChats = $('#chat-list a');
+        const noDiscussionsNotice = $('#no-discussions');
         allChats.click(switch_chat);
 
 
@@ -173,8 +174,17 @@
                     </div>
                 </a>
             `;
-
-            chatList.prepend(new_chat_html);
+            
+            // Remove the no discussions notice if it is present
+            noDiscussionsNotice.remove();
+            
+            // Prepend the new chat to the chat list
+            let element = $(new_chat_html);
+            chatList.prepend(element);
+            
+            // Add the click handler to the new chat
+            element.click(switch_chat);
+            
         }
 
         const form = document.querySelector('#message-form');
@@ -271,6 +281,9 @@
 
             // Set the discussion id
             currentDiscussionId = $(this).data('discussionid');
+            
+            // Undisable the send button if it was disabled
+            $('#send-message').prop('disabled', false);
         }
 
         // Make the Enter key submit the form
