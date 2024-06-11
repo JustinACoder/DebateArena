@@ -14,7 +14,7 @@
         .stance.active {
             opacity: 100% !important;
         }
-        
+
         .request-not-allowed {
             opacity: 50%;
         }
@@ -22,7 +22,37 @@
 {% endblock %}
 
 {% block content %}
-    <h1>{{ debate.title }}</h1>
+    <div class="row align-items-center my-2">
+        <div class="col-auto">
+            <h1 class="mb-0">{{ debate.title }}</h1>
+        </div>
+        <div class="col-auto">
+            <div class="row align-items-center g-2" role="group" aria-label="Debate Vote">
+                <div class="col-auto">
+                    <button type="button"
+                            class="btn fs-4 py-0 btn-outline-success{{ debate.vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
+                            data-bs-toggle="button"
+                            aria-pressed="{{ debate.vote.is_upvote|default:"false" }}"
+                            data-vote="1">
+                        <i class="bi bi-hand-thumbs-up"></i>
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <span class="ms-auto fs-4 text-center align-top"
+                          id="debate-score">{{ debate.vote_score }}</span>
+                </div>
+                <div class="col-auto">
+                    <button type="button"
+                            class="btn fs-4 py-0 btn-outline-danger{{ debate.vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
+                            data-bs-toggle="button"
+                            aria-pressed="{{ debate.vote.is_downvote|default:"false" }}"
+                            data-vote="-1">
+                        <i class="bi bi-hand-thumbs-down"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     {% include 'messages_display.html' %}
     <p><strong>Author</strong>: {{ debate.author }}</p>
     <p><strong>Date</strong>: {{ debate.date }}</p>
@@ -33,41 +63,41 @@
     {% if request.user.is_authenticated %}
         <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
              aria-label="Set Your Stance">
-            <button type="button" class="btn btn-success w-100 stance {% if debate.user_stance %}active{% endif %}"
+            <button type="button" class="btn btn-success w-100 stance {% if stance.stance %}active{% endif %}"
                     id="stance-for-btn" data-stance="for">For
             </button>
             <button type="button" class="btn btn-primary" id="stance-reset-btn">Reset</button>
             <button type="button"
-                    class="btn btn-danger w-100 stance {% if debate.user_stance == False %}active{% endif %}"
+                    class="btn btn-danger w-100 stance {% if stance.stance == False %}active{% endif %}"
                     id="stance-against-btn" data-stance="against">Against
             </button>
         </div>
     {% else %}
-        <p>You must be connected to set your stance. Please <a href="{% url 'user_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+        <p>You must be connected to set your stance. Please <a href="{% url 'account_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
 
     <!-- Debate with someone -->
-    <br>
     <h2>Debate with Someone</h2>
     {% if request.user.is_authenticated %}
         <form method="post" id="request-discussion-form">
             {% csrf_token %}
             <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
                  aria-label="Debate with Someone">
-                <button type="submit" class="btn btn-success w-100 {{ debate.has_requested_for|yesno:'request-not-allowed,' }}"
+                <button type="submit"
+                        class="btn btn-success w-100 {{ has_requested_for|yesno:'request-not-allowed,' }}"
                         formaction="{% url 'request_discussion' debate.title %}?stance_wanted=for">For
                 </button>
                 <button type="submit"
-                        class="btn btn-danger w-100 {{ debate.has_requested_against|yesno:'request-not-allowed,' }}"
+                        class="btn btn-danger w-100 {{ has_requested_against|yesno:'request-not-allowed,' }}"
                         formaction="{% url 'request_discussion' debate.title %}?stance_wanted=against">Against
                 </button>
             </div>
         </form>
     {% else %}
         <p>You must be connected to debate with someone. Please <a
-                href="{% url 'user_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+                href="{% url 'account_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
 
     <!-- Add comments -->
@@ -82,33 +112,62 @@
             <button type="submit" class="btn btn-primary">Add Comment</button>
         </form>
     {% else %}
-        <p>You must be connected to add a comment. Please <a href="{% url 'user_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'user_register' %}?next={{ request.path }}">register</a>.</p>
+        <p>You must be connected to add a comment. Please <a href="{% url 'account_login' %}?next={{ request.path }}">log
+            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
     {% endif %}
 
     <!-- Display comments -->
-    <hr>
     <h2>Comments</h2>
     {# If there are no comments, display a message #}
     {% if comments|length == 0 %}
-        <em>No comments yet.</em>
+        <p>No comments yet.</p>
         {# Otherwise, display the comments #}
     {% else %}
-        <ul>
+        <ul class="list-unstyled">
             {# For each comment, display basic info #}
             {% for comment in comments %}
                 <li>
-                    <h3>{{ comment.author }}</h3>
-                    <p>{{ comment.text }}</p>
+                    <div class="border border-secondary rounded p-2 my-2">
+                        <span class="d-block fw-bold">{{ comment.author }}</span>
+                        <span class="d-block fw-light small">{{ comment.date_added }}</span>
+                        <p>{{ comment.text }}</p>
+                        <div class="row align-items-center g-2" role="group"
+                             aria-label="Comment Vote">
+                            <div class="col-auto">
+                                <button type="button"
+                                        class="btn fs-5 py-0 btn-outline-success{{ comment.vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
+                                        data-bs-toggle="button"
+                                        aria-pressed="{{ comment.vote.is_upvote|default:"false" }}"
+                                        data-comment-id="{{ comment.id }}"
+                                        data-vote="1">
+                                    <i class="bi bi-hand-thumbs-up"></i>
+                                </button>
+                            </div>
+                            <div class="col-auto">
+                                <span class="ms-auto fs-6 text-center align-top"
+                                      id="comment-{{ comment.id }}-score">{{ comment.vote_score }}</span>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button"
+                                        class="btn fs-5 py-0 btn-outline-danger{{ comment.vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
+                                        data-bs-toggle="button"
+                                        aria-pressed="{{ comment.vote.is_downvote|default:"false" }}"
+                                        data-comment-id="{{ comment.id }}"
+                                        data-vote="-1">
+                                    <i class="bi bi-hand-thumbs-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </li>
             {% endfor %}
         </ul>
     {% endif %}
 
     <script>
+        /****************** STANCES ******************/
         let stanceBtns = $('.stance');
         let stanceResetBtn = $('#stance-reset-btn');
-        let requestDiscussionBtns = $('#request-discussion-form button');
         let has_stance = {{ has_stance|yesno:'true,true,false' }};
 
         // Reset the stance when the user clicks on the "Reset" button
@@ -117,7 +176,7 @@
             if (!stanceBtns.hasClass('active')) {
                 return
             }
-            
+
             let is_updated = updateStance('reset');
             if (!is_updated) {
                 return
@@ -138,13 +197,14 @@
             if (!is_updated) {
                 return
             }
-            
+
             stanceBtns.removeClass('active');
             $(this).addClass('active');
         });
 
         function updateStance(stance) {
             // TODO: Make confirmation dialog prettier (using Bootstrap modal for example)
+            // TODO: Are we sure we want to display these ugly confirm dialogs every time?
             if (stance === 'reset' && has_stance && !confirm("WARNING: You are about to reset your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
                 return false;
             } else if (stance !== 'reset' && has_stance && !confirm("You are about to change your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
@@ -158,13 +218,16 @@
                 alert('An error occurred. Please try again. Details: ' + data.responseText);
                 return false;
             });
-            
+
             has_stance = stance !== 'reset';
-            
+
             requestDiscussionBtns.removeClass('request-not-allowed');
-            
+
             return true;
         }
+
+        /****************** DISCUSSION REQUEST ******************/
+        let requestDiscussionBtns = $('#request-discussion-form button');
 
         // Ensure that the user can't request a discussion if no stance is selected
         requestDiscussionBtns.click(function (event) {
@@ -182,5 +245,74 @@
                 });
             }
         });
+
+        /****************** VOTING ******************/
+        let voteBtns = $('.btn-vote');
+        let debateVoteScore = $('#debate-score');
+        {# TODO: cleanup, this is a bit unreadable and hacky #}
+        // When the user clicks on a vote button
+        voteBtns.click(function () {
+            let direction = $(this).data('vote');
+            let isAlreadySelected = $(this).hasClass('selected');
+            let thisButton = $(this);
+
+            // If the button is already active, remove the vote
+            if (isAlreadySelected) {
+                direction = 0;
+            }
+
+            // Define the data to send to the server
+            let data = {
+                direction: direction,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            };
+
+            // Add comment_id if it exists
+            let comment_id = thisButton.data('comment-id');
+            if (comment_id) {
+                data.comment_id = comment_id;
+            }
+
+            // Send the vote to the server
+            $.post(
+                "{% url 'vote' debate.title %}",
+                data
+            ).done(function (data) {
+                // Determine which score to update
+                let score;
+                if (comment_id) {
+                    score = $('#comment-' + comment_id + '-score');
+                } else {
+                    score = debateVoteScore;
+                }
+
+                // Update the score
+                score.text(data.score);
+
+                // Untoggle the other button if it was toggled and unselect it
+                let otherButton = thisButton.parent().parent().find('.btn').not(thisButton); {# TODO: wth is this? We need to change the implementation so that its more robust #}
+                if (otherButton.hasClass('selected')) {
+                    otherButton.button('toggle');
+                    // remove the selected class
+                    otherButton.removeClass('selected');
+                }
+
+                // Make the current button if it was not already selected
+                // Otherwise, remove the selected class
+                if (isAlreadySelected) {
+                    thisButton.removeClass('selected');
+                } else {
+                    thisButton.addClass('selected');
+                }
+            }).fail(function (data) {
+                // Untoggle the button if the vote failed
+                thisButton.button('toggle');
+
+                alert('An error occurred. Please try again. Details: ' + data.responseText);
+            });
+
+        });
+
+
     </script>
 {% endblock %}

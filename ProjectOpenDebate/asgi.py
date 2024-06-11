@@ -11,15 +11,21 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-import discussion.routing
+from django.urls import re_path
+
+from discussion.consumers import MessageConsumer, DiscussionConsumer
+from .demultiplexer import AsyncJsonWebsocketDemultiplexer
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ProjectOpenDebate.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
-        URLRouter(
-            discussion.routing.websocket_urlpatterns
-        )
+        URLRouter([
+            re_path("^ws/$", AsyncJsonWebsocketDemultiplexer.as_asgi(
+                message=MessageConsumer.as_asgi(),
+                discussion=DiscussionConsumer.as_asgi(),
+            ))
+        ])
     ),
 })

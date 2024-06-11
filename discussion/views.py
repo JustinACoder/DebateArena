@@ -2,13 +2,13 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Window, F, BooleanField, When, Case, Value, TextField, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import FirstValue, Coalesce
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db import connection
 
 from debate.models import Debate
 from discussion.forms import MessageForm
 from discussion.models import Discussion, Message
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
 
 
 def dictfetchall(cursor):
@@ -25,9 +25,23 @@ def dictfetchall(cursor):
 @login_required
 def discussion_default(request):
     # Get the most recent discussion for the current user
-    most_recent_discussion_id = (Message.objects.filter(
-        Q(discussion__participant1=request.user) | Q(discussion__participant2=request.user)
-    ).order_by('-created_at').values_list('discussion_id', flat=True).first())
+    # most_recent_discussion_id = (Message.objects.filter(
+    #     Q(discussion__participant1=request.user) | Q(discussion__participant2=request.user)
+    # ).order_by('-created_at').values_list('discussion_id', flat=True).first())
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT dd.id
+            FROM discussion_discussion dd
+                     LEFT JOIN discussion_message dm ON dd.id = dm.discussion_id
+            WHERE dd.participant1_id = %s OR dd.participant2_id = %s
+            ORDER BY COALESCE(dm.created_at, dd.created_at) DESC
+            LIMIT 1;
+            """,
+            [request.user.id, request.user.id]
+        )
+        result = cursor.fetchone()
+        most_recent_discussion_id = result[0] if result else None
 
     return specific_discussion(request, most_recent_discussion_id)
 
@@ -62,7 +76,8 @@ def specific_discussion(request, discussion_id):
             """
             SELECT *
             FROM (SELECT dd.id                                                                               as discussion_id,
-                         dd.debate_id                                                                        as debate_title,
+                         dd.debate_id                                                                        as debate_id,
+                         db.title                                                                            as debate_title,
                          dd.created_at                                                                       as discussion_created_at,
                          dm.id                                                                               as message_id,
                          dm.text                                                                             as message_text,
@@ -77,6 +92,7 @@ def specific_discussion(request, discussion_id):
                            JOIN auth_user p1 ON dd.participant1_id = p1.id
                            JOIN auth_user p2 ON dd.participant2_id = p2.id
                            LEFT JOIN discussion_message dm ON dd.id = dm.discussion_id
+                           JOIN debate_debate db ON dd.debate_id = db.id
                   WHERE (dd.participant1_id = %s OR dd.participant2_id = %s)) as sub
             WHERE message_id = first_message_id
                OR first_message_id IS NULL
@@ -85,6 +101,11 @@ def specific_discussion(request, discussion_id):
             [request.user.id, request.user.id]
         )
         discussions_info = dictfetchall(cursor)
+
+    # If this view is called with a discussion_id but the query is empty, it means that the discussion doesn't exist
+    # OR the user is not a participant. Therefore, we will redirect to the default discussion view.
+    if not discussions_info and discussion_id:
+        return redirect(discussion_default)  # TODO: should we return an error instead?
 
     # Get Message form
     message_form = MessageForm()
@@ -102,10 +123,10 @@ def specific_discussion(request, discussion_id):
 
 @login_required
 def retrieve_messages(request, discussion_id):
-    discussion_instance = (Discussion.objects
+    discussion_instance = get_object_or_404(Discussion.objects  # TODO: should we return 403 if the user is not a participant?
+                           .filter(Q(participant1=request.user) | Q(participant2=request.user))
                            .prefetch_related('message_set')
-                           .select_related('debate', 'participant1', 'participant2')
-                           .get(id=discussion_id))
+                           .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
     messages = discussion_instance.message_set.order_by('created_at').annotate(
         is_current_user=Case(
             When(author=request.user, then=Value(True)),

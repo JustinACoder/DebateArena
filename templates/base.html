@@ -62,15 +62,16 @@
                     {% if not user.is_authenticated %}
                         {# if the user is not connected, provide options to register or login #}
                         <a class="dropdown-item"
-                           href="{% url 'user_register' %}?next={{ request.GET.next|default:request.path }}">Register</a>
+                           href="{% url 'account_signup' %}?next={{ request.GET.next|default:request.path }}">Register</a>
                         <a class="dropdown-item"
-                           href="{% url 'user_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
+                           href="{% url 'account_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
                     {% else %}
                         {# if the user is connected, provide options #}
+                        <a class="dropdown-item" href="{% url 'account_profile' request.user.username %}">Profile</a>
                         <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
-                        <a class="dropdown-item" href="{% url 'user_profile' %}">Profile</a>
+                        <a class="dropdown-item" href="{% url 'account_settings' %}">Settings</a>
                         <div class="dropdown-divider"></div>
-                        <form action="{% url 'user_logout' %}"
+                        <form action="{% url 'account_logout' %}"
                               method="post">
                             {% csrf_token %}
                             <button class="dropdown-item" type="submit">Logout</button>
