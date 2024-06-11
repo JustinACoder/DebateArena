@@ -2,13 +2,13 @@ from django.contrib.auth.models import User
 from django.db.models import Q, Window, F, BooleanField, When, Case, Value, TextField, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import FirstValue, Coalesce
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db import connection
 
 from debate.models import Debate
 from discussion.forms import MessageForm
 from discussion.models import Discussion, Message
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
 
 
 def dictfetchall(cursor):
@@ -40,7 +40,8 @@ def discussion_default(request):
             """,
             [request.user.id, request.user.id]
         )
-        most_recent_discussion_id = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        most_recent_discussion_id = result[0] if result else None
 
     return specific_discussion(request, most_recent_discussion_id)
 
@@ -101,6 +102,11 @@ def specific_discussion(request, discussion_id):
         )
         discussions_info = dictfetchall(cursor)
 
+    # If this view is called with a discussion_id but the query is empty, it means that the discussion doesn't exist
+    # OR the user is not a participant. Therefore, we will redirect to the default discussion view.
+    if not discussions_info and discussion_id:
+        return redirect(discussion_default)  # TODO: should we return an error instead?
+
     # Get Message form
     message_form = MessageForm()
 
@@ -117,10 +123,10 @@ def specific_discussion(request, discussion_id):
 
 @login_required
 def retrieve_messages(request, discussion_id):
-    discussion_instance = (Discussion.objects
+    discussion_instance = get_object_or_404(Discussion.objects  # TODO: should we return 403 if the user is not a participant?
+                           .filter(Q(participant1=request.user) | Q(participant2=request.user))
                            .prefetch_related('message_set')
-                           .select_related('debate', 'participant1', 'participant2')
-                           .get(id=discussion_id))
+                           .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
     messages = discussion_instance.message_set.order_by('created_at').annotate(
         is_current_user=Case(
             When(author=request.user, then=Value(True)),
