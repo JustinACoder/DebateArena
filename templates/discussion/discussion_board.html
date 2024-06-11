@@ -59,16 +59,22 @@
                                   datetime="{{ discussion_info.message_created_at|timezone:"America/Montreal"|date:"c" }}"></time>
                         </div>
                     </a>
+                {% empty %}
+                    <p class="text-center" id="no-discussions">No discussions yet.</p>
                 {% endfor %}
             </div>
         </div>
         <div class="col d-flex flex-column p-0" id="current-chat">
             <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3" id="chat-history">
-                <div class="align-items-center justify-content-center d-flex">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                {% if discussion_id is None %}
+                    <div class="align-items-center justify-content-center d-flex">
+                        <p class="text-secondary m-4">
+                            Once you have a discussion, you will be able to see it here. To start debating with someone, 
+                            choose a debate from the <a href="{% url 'debate_index' %}">index</a>, take a stance, 
+                            and click on the stance you wish to debate.
+                        </p>
                     </div>
-                </div>
+                {% endif %}
             </div>
             <div class="mt-3 px-3" id="message-box">
                 <form id="message-form">
@@ -77,7 +83,9 @@
                             {{ message_form.text | as_crispy_field }}
                         </div>
                         <div class="col-auto">
-                            <button type="submit" class="btn btn-primary" id="send-message">Send</button>
+                            <button type="submit" class="btn btn-primary"
+                                    id="send-message" {{ discussion_id|yesno:",,disabled" }}>Send
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -86,9 +94,8 @@
     </div>
 
     <script>
-        // TODO: make sure messages dont get lost when switching while a new websocket message is being received
-        // TODO: make sure the websocket connection stays open for long periods of time (?)
-
+        {# TODO: make sure messages dont get lost when switching while a new websocket message is being received #}
+        {# TODO: make sure the websocket connection stays open for long periods of time (?) #}
         /* Switching between chats */
         const chatList = $('#chat-list');
         const chatHistory = $('#chat-history');
@@ -98,14 +105,14 @@
 
         /* WebSocket chat */
         {# TODO: put reusable sections into a file that we can include #}
-        let currentDiscussionId = {{ discussion_id }};
+        let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
         ws.onmessage = function (event) {
             let wsMessage = JSON.parse(event.data);
-            
+
             let payload = wsMessage['payload'];
-            
+
             // Check if there was an error
             if (payload['status'] === 'error') {
                 alert(`Error (${payload['event_type']}): ${payload['message']}`);
@@ -166,7 +173,7 @@
                     </div>
                 </a>
             `;
-            
+
             chatList.prepend(new_chat_html);
         }
 
@@ -228,6 +235,16 @@
             const url = $(this).attr('href');
             window.history.pushState('', '', url);
 
+            // Add the loading spinner
+            chatHistory.empty();
+            chatHistory.append(`
+                <div class="align-items-center justify-content-center d-flex">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `);
+
             // Make the clicked chat active by changing the background color
             allChats.removeClass('active');
             $(this).addClass('active');
@@ -237,9 +254,18 @@
                 .then(response => response.json())
                 .then(data => {
                     chatHistory.empty();
+
+                    // Add the messages to the chat history
                     data.messages.forEach(message => {
                         addMessageToChatHistory(message['text'], message['is_current_user'], new Date(message['created_at']));
                     });
+
+                    // Indicate that we are at the start of the chat
+                    chatHistory.append(`
+                        <div class="align-items-center justify-content-center d-flex">
+                            <p class="text-secondary m-4">Start of Discussion</p>
+                        </div>
+                    `);
                 })
                 .catch(error => console.error('Error:', error));
 
@@ -257,9 +283,11 @@
         });
 
         $(document).ready(function () {
-            // Once the page is loaded, simulate a click on the first chat
-            // TODO: load with the page instead of simulating a click
-            $('#discussion-{{ discussion_id }}').click();
+            {# TODO: load with the page instead of simulating a click #}
+            {% if discussion_id %}
+                // Once the page is loaded, simulate a click on the first chat
+                $('#discussion-{{ discussion_id }}').click();
+            {% endif %}
 
             // initialize timeago
             jQuery.timeago.settings.strings = {

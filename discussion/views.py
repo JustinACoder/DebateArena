@@ -40,7 +40,8 @@ def discussion_default(request):
             """,
             [request.user.id, request.user.id]
         )
-        most_recent_discussion_id = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        most_recent_discussion_id = result[0] if result else None
 
     return specific_discussion(request, most_recent_discussion_id)
 
