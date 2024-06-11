@@ -187,11 +187,17 @@
             
         }
 
-        const form = document.querySelector('#message-form');
-        const messageInput = document.querySelector('#message-text-input');
-        form.addEventListener('submit', function (event) {
+        const form = $('#message-form');
+        const messageInput = $('#message-text-input');
+        const sendButton = $('#send-message');
+        form.submit(function (event) {
             event.preventDefault();
-            let message = messageInput.value;
+            let message = messageInput[0].value.trim();
+            
+            if (sendButton.prop('disabled') || message === '') {
+                return;
+            }
+
             let data = {
                 'stream': 'message',
                 'payload': {
@@ -204,7 +210,7 @@
             };
             ws.send(JSON.stringify(data));
 
-            messageInput.value = '';
+            messageInput[0].value = '';
 
             {# Note: we do not add the message to the chat history here, #}
             {# because we are waiting for the websocket to send it back #}
@@ -283,15 +289,15 @@
             currentDiscussionId = $(this).data('discussionid');
             
             // Undisable the send button if it was disabled
-            $('#send-message').prop('disabled', false);
+            sendButton.prop('disabled', false);
         }
 
         // Make the Enter key submit the form
         // Make alt, ctrl, shift + Enter add a new line
-        messageInput.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+        messageInput.keypress(function (event) {
+            if (event.which === 13 && !event.altKey && !event.ctrlKey && !event.shiftKey) {
                 event.preventDefault();
-                form.dispatchEvent(new Event('submit'));
+                form.submit();
             }
         });
 
