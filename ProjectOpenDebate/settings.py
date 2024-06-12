@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     #'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'voting',
-    'el_pagination',
     'crispy_forms',
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
