@@ -25,5 +25,6 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('accounts/', include('users.urls')),
     path('chat/', include('discussion.urls')),
+    path("convert/", include("guest_user.urls")),
     path("__debug__/", include("debug_toolbar.urls")),
 ]
