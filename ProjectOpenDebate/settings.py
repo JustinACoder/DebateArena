@@ -188,6 +188,13 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # TODO: Change
 EMAIL_SUBJECT_PREFIX = '[DebateArena] '
 DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
 
+# Pagination settings
+ENDLESS_PAGINATION_SETTINGS = {
+    'FIRST_PAGE_SIZE': 50,  # The size of the first page of a paginated list
+    'PAGE_SIZE': 30,  # The size of the rest of the pages
+}
+
+
 # Admins
 ADMINS = [
     ('Admin', env("ADMIN_EMAIL", default="admin@gmail.com"))

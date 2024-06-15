@@ -1,9 +1,11 @@
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import Q, Window, F, BooleanField, When, Case, Value, TextField, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import FirstValue, Coalesce
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db import connection
+from django.views.decorators.http import require_POST, require_GET
 
 from debate.models import Debate
 from discussion.forms import MessageForm
@@ -122,29 +124,63 @@ def specific_discussion(request, discussion_id):
 
 
 @login_required
+@require_GET
 def retrieve_messages(request, discussion_id):
-    discussion_instance = get_object_or_404(Discussion.objects  # TODO: should we return 403 if the user is not a participant?
-                           .filter(Q(participant1=request.user) | Q(participant2=request.user))
-                           .prefetch_related('message_set')
-                           .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
-    messages = discussion_instance.message_set.order_by('created_at').annotate(
+    # Note: I decided not to use Paginator or django-el-pagination for this since it is pretty simple and would be
+    # more complex to implement with those tools.
+
+    # Get page number and determine if the user wants discussion info
+    page = request.GET.get('page', '1')  # Starts at 1
+    include_discussion_info = request.GET.get('include_discussion_info', 'false')
+
+    # Ensure that the values are valid
+    if not page.isdigit() or not include_discussion_info in ['true', 'false']:
+        return HttpResponseBadRequest()
+
+    page = int(page)
+    include_discussion_info = include_discussion_info == 'true'
+
+
+    # From the page number, calculate the start (inclusive) and end (exclusive) indexes
+    first_page_size = settings.ENDLESS_PAGINATION_SETTINGS['FIRST_PAGE_SIZE']
+    other_page_size = settings.ENDLESS_PAGINATION_SETTINGS['PAGE_SIZE']
+    if page == 1:
+        start = 0
+        end = first_page_size
+    else:
+        start = first_page_size + (page - 2) * other_page_size
+        end = start + other_page_size
+
+    # Get messages and discussion info
+    discussion_instance = get_object_or_404(
+        Discussion.objects  # TODO: should we return 403 if the user is not a participant?
+        .filter(Q(participant1=request.user) | Q(participant2=request.user))
+        .prefetch_related('message_set')
+        .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
+    messages = (discussion_instance.message_set.order_by('-created_at').annotate(
         is_current_user=Case(
             When(author=request.user, then=Value(True)),
             default=Value(False),
             output_field=BooleanField()
         )
-    ).values('id', 'author__username', 'text', 'created_at', 'is_current_user')
+    ).values('id', 'author__username', 'text', 'created_at', 'is_current_user'))
 
+    # Initialize response data
+    results = list(messages[start:end + 1])
     data = {
-        'discussion': {
+        'messages': results[:-1],
+        'has_next': len(results) == end + 1 - start,  # If there is one more message than the page size, there is a next page
+    }
+
+    # If the user wants discussion info, include it in the response
+    if include_discussion_info:
+        data['discussion'] = {
             'id': discussion_instance.id,
             'debate': discussion_instance.debate.title,
             'participants': [
                 {'id': discussion_instance.participant1_id, 'username': discussion_instance.participant1.username},
                 {'id': discussion_instance.participant2_id, 'username': discussion_instance.participant2.username},
             ],
-        },
-        'messages': list(messages)
-    }
+        }
 
-    return JsonResponse(data, safe=False)
+    return JsonResponse(data)
