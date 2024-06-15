@@ -69,8 +69,8 @@
                 {% if discussion_id is None %}
                     <div class="align-items-center justify-content-center d-flex">
                         <p class="text-secondary m-4">
-                            Once you have a discussion, you will be able to see it here. To start debating with someone, 
-                            choose a debate from the <a href="{% url 'debate_index' %}">index</a>, take a stance, 
+                            Once you have a discussion, you will be able to see it here. To start debating with someone,
+                            choose a debate from the <a href="{% url 'debate_index' %}">index</a>, take a stance,
                             and click on the stance you wish to debate.
                         </p>
                     </div>
@@ -101,12 +101,25 @@
         const chatHistory = $('#chat-history');
         const allChats = $('#chat-list a');
         const noDiscussionsNotice = $('#no-discussions');
+        const spinner = $(`
+            <div class="align-items-center justify-content-center d-flex">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `);
+        const startOfDiscussionMessage = $(`
+            <div class="align-items-center justify-content-center d-flex">
+                <p class="text-secondary m-4">Start of Discussion</p>
+            </div>
+        `);
         allChats.click(switch_chat);
 
 
         /* WebSocket chat */
         {# TODO: put reusable sections into a file that we can include #}
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
+        let currentMessagePage = 1;
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
         ws.onmessage = function (event) {
@@ -152,7 +165,7 @@
             let is_current_user = data['sender_id'] === {{ request.user.id }};
 
             {# TODO: should we set the datetime using the server time which would be sent in the message? #}
-            addMessageToChatHistory(data['message'], is_current_user, new Date());
+            addMessageToChatHistory(data['message'], is_current_user, new Date(), true);
         }
 
         function handle_new_discussion(data) {
@@ -174,24 +187,30 @@
                     </div>
                 </a>
             `;
-            
+
             // Remove the no discussions notice if it is present
             noDiscussionsNotice.remove();
-            
+
             // Prepend the new chat to the chat list
             let element = $(new_chat_html);
             chatList.prepend(element);
-            
+
             // Add the click handler to the new chat
             element.click(switch_chat);
-            
+
         }
 
-        const form = document.querySelector('#message-form');
-        const messageInput = document.querySelector('#message-text-input');
-        form.addEventListener('submit', function (event) {
+        const form = $('#message-form');
+        const messageInput = $('#message-text-input');
+        const sendButton = $('#send-message');
+        form.submit(function (event) {
             event.preventDefault();
-            let message = messageInput.value;
+            let message = messageInput[0].value.trim();
+
+            if (sendButton.prop('disabled') || message === '') {
+                return;
+            }
+
             let data = {
                 'stream': 'message',
                 'payload': {
@@ -204,23 +223,28 @@
             };
             ws.send(JSON.stringify(data));
 
-            messageInput.value = '';
+            messageInput[0].value = '';
 
             {# Note: we do not add the message to the chat history here, #}
             {# because we are waiting for the websocket to send it back #}
             {# This serves as a confirmation that the message was sent #}
         });
 
-        function addMessageToChatHistory(text, is_current_user, datetime) {
+        function addMessageToChatHistory(text, is_current_user, datetime, new_message) {
             // TODO: add datetime to the message
-            const message = document.createElement('div');
+            let message = document.createElement('div');
             let bgColor = is_current_user ? 'dodgerblue' : 'whitesmoke';
             let textColor = is_current_user ? 'white' : 'black';
             let justify = is_current_user ? 'justify-content-end' : 'justify-content-start';
             let safeText = encodehtml(text);
             message.classList.add('m-1', 'd-flex', justify);
             message.innerHTML = `<p style="background-color: ${bgColor}; color: ${textColor}; max-width: min(75%, 650px); border-radius: 24px; padding: 8px 12px;" class="mb-0 text-break text-wrap align-content-center">${safeText}</p>`;
-            chatHistory.prepend(message);
+
+            if (new_message) {
+                chatHistory.prepend(message);
+            } else {
+                spinner.before(message);
+            }
         }
 
         function updateMostRecent(discussionId, message) {
@@ -247,51 +271,73 @@
 
             // Add the loading spinner
             chatHistory.empty();
-            chatHistory.append(`
-                <div class="align-items-center justify-content-center d-flex">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            `);
+            chatHistory.append(spinner);
+            
+            // Set hasNext to true in case we had reached the end of the discussion before
+            hasNext = true;
 
             // Make the clicked chat active by changing the background color
             allChats.removeClass('active');
             $(this).addClass('active');
 
-            // Fetch chat history and parse the json response
-            fetch(url + 'messages/')
-                .then(response => response.json())
-                .then(data => {
-                    chatHistory.empty();
+            // Load the messages
+            currentMessagePage = 1;
+            loadMessages(url, currentMessagePage, true);
 
+            // Set the discussion id
+            currentDiscussionId = $(this).data('discussionid');
+
+            // Enable the send button if it was disabled
+            sendButton.prop('disabled', false);
+        }
+
+        function loadMessages(discussion_url, page, include_discussion_info) {
+            fetch(discussion_url + 'messages/?' + new URLSearchParams({
+                'page': page,
+                'include_discussion_info': include_discussion_info
+            }), {
+                method: 'GET'
+            }).then(response => response.json())
+                .then(data => {
                     // Add the messages to the chat history
                     data.messages.forEach(message => {
                         addMessageToChatHistory(message['text'], message['is_current_user'], new Date(message['created_at']));
                     });
 
-                    // Indicate that we are at the start of the chat
-                    chatHistory.append(`
-                        <div class="align-items-center justify-content-center d-flex">
-                            <p class="text-secondary m-4">Start of Discussion</p>
-                        </div>
-                    `);
+                    // if it's the last page and there are no messages, remove the spinner and add the
+                    // start of discussion message. We will also mark the discussion as fully loaded
+                    if (!data.has_next) {
+                        spinner.remove();
+                        chatHistory.append(startOfDiscussionMessage);
+                        hasNext = false;
+                    }
                 })
-                .catch(error => console.error('Error:', error));
-
-            // Set the discussion id
-            currentDiscussionId = $(this).data('discussionid');
-            
-            // Undisable the send button if it was disabled
-            $('#send-message').prop('disabled', false);
+                .catch(error => {
+                    console.error('Error:', error);
+                    currentMessagePage--;  // Try again next time from the same page
+                })
+                .finally(() => loading = false);
         }
+
+        // Load more messages when the user scrolls to the bottom of the chat history
+        let loading = false;
+        let hasNext = true;
+        chatHistory.scroll(function () {
+            {# Note that, since the chat-history div is column-REVERSE, the bottom is at the top! #}
+            let numberOfPixelsFromBottom = chatHistory[0].scrollHeight + chatHistory.scrollTop() - chatHistory.height();
+            if (numberOfPixelsFromBottom < 100 && !loading && hasNext) {
+                loading = true;
+                currentMessagePage++;
+                loadMessages(window.location.pathname, currentMessagePage, false);
+            }
+        });
 
         // Make the Enter key submit the form
         // Make alt, ctrl, shift + Enter add a new line
-        messageInput.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+        messageInput.keypress(function (event) {
+            if (event.which === 13 && !event.altKey && !event.ctrlKey && !event.shiftKey) {
                 event.preventDefault();
-                form.dispatchEvent(new Event('submit'));
+                form.submit();
             }
         });
 
