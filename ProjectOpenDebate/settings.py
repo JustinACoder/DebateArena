@@ -197,6 +197,9 @@ ENDLESS_PAGINATION_SETTINGS = {
     'PAGE_SIZE': 30,  # The size of the rest of the pages
 }
 
+# Guest user settings
+GUEST_USER_NAME_GENERATOR = 'guest_user.functions.generate_numbered_username'
+GUEST_USER_NAME_PREFIX = 'guest_'
 
 # Admins
 ADMINS = [
