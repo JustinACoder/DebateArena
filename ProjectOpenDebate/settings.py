@@ -198,9 +198,6 @@ ENDLESS_PAGINATION_SETTINGS = {
 }
 
 # Guest user settings
-GUEST_USER_NAME_GENERATOR = 'guest_user.functions.generate_numbered_username'
-GUEST_USER_NAME_PREFIX = 'guest_'
-GUEST_USER_NAME_SUFFIX_LENGTH = 6
 GUEST_USER_MAX_AGE = 60 * 60 * 24  # 12 hours
 
 # Admins
