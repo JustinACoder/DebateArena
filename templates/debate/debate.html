@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_filters %}
+{% load guest_user %}
 
 {% block head %}
     <style>
@@ -60,7 +61,7 @@
 
     <!-- Set your stance -->
     <h2>Set Your Stance</h2>
-    {% if request.user.is_authenticated %}
+    {% if user.is_authenticated %}
         <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
              aria-label="Set Your Stance">
             <button type="button" class="btn btn-success w-100 stance {% if stance.stance %}active{% endif %}"
@@ -79,7 +80,7 @@
 
     <!-- Debate with someone -->
     <h2>Debate with Someone</h2>
-    {% if request.user.is_authenticated %}
+    {% if user.is_authenticated %}
         <form method="post" id="request-discussion-form">
             {% csrf_token %}
             <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
@@ -104,7 +105,7 @@
     <hr>
     <h2>Add a Comment</h2>
     {# Display the form only if the user is connected #}
-    {% if user.is_authenticated %}
+    {% if user.is_authenticated and not user|is_guest_user %}
         <form method="post">
             {% csrf_token %}
             {{ comment_form | crispy }}
@@ -205,9 +206,9 @@
         function updateStance(stance) {
             // TODO: Make confirmation dialog prettier (using Bootstrap modal for example)
             // TODO: Are we sure we want to display these ugly confirm dialogs every time?
-            if (stance === 'reset' && has_stance && !confirm("WARNING: You are about to reset your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
+            if (stance === 'reset' && has_stance{% if not user|is_guest_user %} && !confirm("WARNING: You are about to reset your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?"){% endif %}) {
                 return false;
-            } else if (stance !== 'reset' && has_stance && !confirm("You are about to change your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
+            } else if (stance !== 'reset' && has_stance{% if not user|is_guest_user %} && !confirm("You are about to change your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?"){% endif %}) {
                 return false;
             }
 
@@ -252,7 +253,7 @@
         {# TODO: cleanup, this is a bit unreadable and hacky #}
         // When the user clicks on a vote button
         voteBtns.click(function () {
-            {% if not request.user.is_authenticated %}
+            {% if not user.is_authenticated or user|is_guest_user %}
                 {# TODO: alert is ugly figure out something better (sign in popup?) #}
                 alert('You must be connected to vote.');
                 // Untoggle the button

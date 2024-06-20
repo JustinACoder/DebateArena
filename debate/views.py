@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpRespon
     JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from voting.models import Vote
+from guest_user.decorators import allow_guest_user
 
 from discussion.models import DiscussionRequest, Discussion
 from discussion.views import specific_discussion
@@ -22,6 +23,7 @@ def index(request):
     return render(request, 'debate/index.html', {'debates': debates})
 
 
+@allow_guest_user
 def debate(request, debate_title):
     debate_instance = get_object_or_404(Debate.objects.select_related('author'), title=debate_title)
 
