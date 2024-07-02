@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import include, path, reverse
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', lambda request: HttpResponseRedirect(reverse('debate_index'))),
+    path('', views.main, name='main'),
     path('d/', include('debate.urls')),
     path('accounts/', include('allauth.urls')),
     path('accounts/', include('users.urls')),

@@ -13,19 +13,37 @@
     <link rel="stylesheet" href="{% static 'libraries/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'libraries/bootstrap-icons.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+          rel="stylesheet">
 
     <!-- TODO: figure out the bestway to include these libraries (ex: end of body? CDN? etc...) -->
     <script src="{% static 'libraries/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'libraries/bootstrap.bundle.min.js' %}"></script>
 
+    <style>
+        :root {
+            --bs-font-sans-serif: 'Montserrat', sans-serif;
+        }
+        
+        section {
+            scroll-margin-top: 56px;
+        }
+        
+        #main-content {
+            padding-top: 56px;
+        }
+    </style>
+
     {% block head %}
     {% endblock %}
 </head>
-<body class="bg-dark d-flex flex-column h-100">
+<body class="bg-light d-flex flex-column h-100">
 <!-- Navbar -->
-<nav class="navbar navbar-expand-sm bg-dark navbar-dark flex-shrink-1">
+<nav class="navbar navbar-expand-sm bg-light flex-shrink-1 fixed-top border-bottom">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/">Open Debate</a>
+        <a class="navbar-brand" href="/">DebateArena</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -33,58 +51,56 @@
             <!-- Left Side -->
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'debate_index' %}">Index</a>
+                    <a class="nav-link" href="{% url 'debate_index' %}">Debates</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Contact</a>
                 </li>
             </ul>
             <!-- Right Side -->
-            <div class="btn-group ms-auto">
-                <a class="nav-link" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"
-                   aria-expanded="false">
-                    <div class="row gx-2">
-                        <div class="col-auto me-auto align-content-center">
-                            {# display user name #}
-                            {% if not user.is_authenticated %}
-                                {# if the user is not connected, display "Not Connected" #}
-                                <span class="text-white"><em>Not Connected</em></span>
-                            {% else %}
-                                {# if the user is connected, display the user's username #}
-                                <span class="text-white">{{ user.username }}</span>
-                            {% endif %}
-                        </div>
-                        <div class="col-auto">
-                            {# Note that fs-3 is dynamic. This is why the header height seems to change very slightly #}
-                            {# when we change the size of the window manually. #}
-                            <i class="bi bi-person-circle text-white fs-3"></i>
+            <div class="ms-auto">
+                {% if user.is_authenticated %}
+                    <div class="btn-group">
+                        <a class="nav-link" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown"
+                           aria-expanded="false">
+                            <div class="row gx-2">
+                                <span class="col-auto me-auto align-content-center">{{ user.username }}</span>
+                                <div class="col-auto">
+                                    {# Note that fs-3 is dynamic. This is why the header height seems to change very slightly #}
+                                    {# when we change the size of the window manually. #}
+                                    <i class="bi bi-person-circle fs-3"></i>
+                                </div>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                            <a class="dropdown-item"
+                               href="{% url 'account_profile' request.user.username %}">Profile</a>
+                            <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
+                            <a class="dropdown-item" href="{% url 'account_settings' %}">Settings</a>
+                            <div class="dropdown-divider"></div>
+                            <form action="{% url 'account_logout' %}"
+                                  method="post">
+                                {% csrf_token %}
+                                <button class="dropdown-item" type="submit">Logout</button>
+                            </form>
                         </div>
                     </div>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
-                    {% if not user.is_authenticated %}
-                        {# if the user is not connected, provide options to register or login #}
-                        <a class="dropdown-item"
-                           href="{% url 'account_signup' %}?next={{ request.GET.next|default:request.path }}">Register</a>
-                        <a class="dropdown-item"
-                           href="{% url 'account_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
-                    {% else %}
-                        {# if the user is connected, provide options #}
-                        <a class="dropdown-item" href="{% url 'account_profile' request.user.username %}">Profile</a>
-                        <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
-                        <a class="dropdown-item" href="{% url 'account_settings' %}">Settings</a>
-                        <div class="dropdown-divider"></div>
-                        <form action="{% url 'account_logout' %}"
-                              method="post">
-                            {% csrf_token %}
-                            <button class="dropdown-item" type="submit">Logout</button>
-                        </form>
-                    {% endif %}
-                </div>
+                {% else %}
+                    <a class="btn btn-outline-primary row-cols-a"
+                       href="{% url 'account_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
+                    <a class="btn btn-primary"
+                       href="{% url 'account_signup' %}?next={{ request.GET.next|default:request.path }}">Register</a>
+                {% endif %}
             </div>
         </div>
     </div>
 </nav>
 
 <!-- Content -->
-<div id="main-content" class="container-fluid bg-white flex-grow-1">
+<div id="main-content" class="bg-light flex-grow-1">
     {% block content %}
     {% endblock %}
 </div>
@@ -92,8 +108,8 @@
 <!-- Footer -->
 {% if not remove_footer %}
     <footer>
-        <div class="container-fluid bg-dark text-white text-center p-3 h">
-            <span>&copy; 2024 Open Debate</span>
+        <div class="container-fluid bg-dark text-white text-center p-3">
+            <span>&copy; 2024 DebateArena</span>
         </div>
     </footer>
 {% endif %}
