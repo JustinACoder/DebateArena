@@ -3,10 +3,10 @@
 {% block head %}
     <style>
         #rolling-debate {
-            display: inline-block;
-            animation: fade 2.5s linear infinite;
-            background-image: linear-gradient(90deg, #005eec 0%, #2985ff 100%);
-            background-size: 200% 200%;
+            display: block;
+            width: fit-content;
+            background-image: linear-gradient(90deg, #0157d5 0%, #398dfb 100%);
+            background-size: 100% 100%;
             background-position: 100%;
             color: transparent;
             -webkit-background-clip: text;
@@ -16,18 +16,6 @@
         .hero-title {
             font-size: calc(1vw + 2vh + 2vmin);
         }
-
-        @keyframes fade {
-            0%, 50% {
-                opacity: 1;
-            }
-            75% {
-                opacity: 0;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
     </style>
 {% endblock %}
 
@@ -35,7 +23,7 @@
     <div class="container d-flex flex-column justify-content-center" style="height: 75vh">
         <div style="max-width: 1000px">
             <h1 class="text-black hero-title fw-bold">Challenge your Ideas by Debating on <span
-                    id="rolling-debate">Test Debate Name</span>
+                    id="rolling-debate">Gun Control</span>
             </h1>
             <h3 class="text-secondary">Via Live One-on-One Chat</h3>
             <div class="row">
@@ -171,4 +159,18 @@
             <p class="text-center">Sign up for our newsletter to receive updates on new debates, features, and more!</p>
         </div>
     </section>
+
+    <script>
+        const debateNames = ['Gun Control', 'Flat Earth', 'Universal Basic Income', 'Milk or Cereal First', 'Biden vs Trump',
+            'Climate Change', 'R6 Siege vs Valorant', 'iOS vs Android', 'Quebec Independence'];
+        let index = 1;
+        const rollingDebate = $('#rolling-debate');
+        setInterval(() => {
+            rollingDebate.fadeOut(500, () => {
+                rollingDebate.text(debateNames[index]);
+                index = (index + 1) % debateNames.length;
+                rollingDebate.fadeIn(500);
+            });
+        }, 2500);
+    </script>
 {% endblock %}
