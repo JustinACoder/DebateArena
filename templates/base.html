@@ -26,11 +26,11 @@
         :root {
             --bs-font-sans-serif: 'Montserrat', sans-serif;
         }
-        
+
         section {
             scroll-margin-top: 56px;
         }
-        
+
         #main-content {
             padding-top: 56px;
         }
@@ -107,10 +107,51 @@
 
 <!-- Footer -->
 {% if not remove_footer %}
-    <footer>
-        <div class="container-fluid bg-dark text-white text-center p-3">
-            <span>&copy; 2024 DebateArena</span>
+    {# Source: https://mdbootstrap.com/docs/standard/navigation/footer/examples-and-customization/ #}
+    <footer class="text-center text-lg-start text-white bg-dark">
+        <div class="container p-4 pb-0">
+            <section>
+                <div class="row">
+                    <div class="col-md-3 col-lg-3 col-xl-3 mx-auto my-3">
+                        <h6 class="text-uppercase mb-3 font-weight-bold">Debate Arena</h6>
+                        <p>
+                            DebateArena is a platform where you can challenge your ideas by debating on various topics.
+                        </p>
+                    </div>
+
+                    <hr class="w-100 clearfix d-md-none"/>
+                    
+                    <div class="col-md-2 col-lg-2 col-xl-2 mx-auto my-3">
+                        <h6 class="text-uppercase mb-3 font-weight-bold">Useful Links</h6>
+                        <p>
+                            <a href="{% url 'main' %}" class="text-white">Homepage</a>
+                        </p>
+                        <p>
+                            <a href="{% url 'debate_index' %}" class="text-white">Debates</a>
+                        </p>
+                    </div>
+
+                    <hr class="w-100 clearfix d-md-none"/>
+                    
+                    <div class="col-md-4 col-lg-3 col-xl-3 mx-auto my-3">
+                        <h6 class="text-uppercase mb-3 font-weight-bold">Contact</h6>
+                        <p><i class="bi bi-envelope me-3"></i>support@debatearena.com</p>
+                    </div>
+
+                    <hr class="w-100 clearfix d-md-none"/>
+                    
+                    <div class="col-md-3 col-lg-2 col-xl-2 mx-auto my-3">
+                        <h6 class="text-uppercase mb-3 font-weight-bold">Follow us</h6>
+                        <a class="btn btn-primary btn-floating m-1 bg-dark"
+                           href="https://github.com/JustinACoder/" role="button">
+                            <i class="bi bi-github fs-5"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
         </div>
+        
+        <div class="text-center p-3 bg-dark">© DebateArena 2024</div>
     </footer>
 {% endif %}
 </body>
