@@ -3,7 +3,7 @@
 {% block head %}
     <style>
         #rolling-debate {
-            display: block;
+            display: inline-block;
             width: fit-content;
             background-image: linear-gradient(90deg, #0157d5 0%, #398dfb 100%);
             background-size: 100% 100%;
@@ -14,25 +14,30 @@
         }
 
         .hero-title {
-            font-size: calc(1vw + 2vh + 2vmin);
+            font-size: calc(1vw + 2vh + 1vmin);
         }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="container d-flex flex-column justify-content-center" style="height: 75vh">
-        <div style="max-width: 1000px">
-            <h1 class="text-black hero-title fw-bold">Challenge your Ideas by Debating on <span
-                    id="rolling-debate">Gun Control</span>
-            </h1>
-            <h3 class="text-secondary">Via Live One-on-One Chat</h3>
-            <div class="row">
-                <div class="col col-auto my-1">
-                    <a class="btn btn-lg btn-primary" href="{% url 'debate_index' %}">Explore Debates</a>
+    <div class="container" style="height: 75vh">
+        <div class="row h-100 justify-content-center">
+            <div class="col-lg align-content-center text-center text-lg-start">
+                <h1 class="text-black hero-title fw-bold">Challenge your Ideas by Debating on <span
+                        id="rolling-debate">Gun Control</span>
+                </h1>
+                <p class="text-secondary fs-4">Via Live One-on-One Chat</p>
+                <div class="row justify-content-center justify-content-lg-start">
+                    <div class="col col-auto my-1">
+                        <a class="btn btn-lg btn-primary" href="{% url 'debate_index' %}">Explore Debates</a>
+                    </div>
+                    <div class="col col-auto my-1 align-content-center">
+                        <a class="text-secondary fs-5" href="#how-it-works">Learn More</a>
+                    </div>
                 </div>
-                <div class="col col-auto my-1 align-content-center">
-                    <a class="text-secondary fs-5" href="#how-it-works">Learn More</a>
-                </div>
+            </div>
+            <div class="col-lg align-content-center d-none d-lg-block">
+                {% include 'debate-main.svg' %}
             </div>
         </div>
     </div>
