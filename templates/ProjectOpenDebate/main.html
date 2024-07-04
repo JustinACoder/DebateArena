@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    <style>
+        #rolling-debate {
+            display: inline-block;
+            width: fit-content;
+            background-image: linear-gradient(90deg, #0157d5 0%, #398dfb 100%);
+            background-size: 100% 100%;
+            background-position: 100%;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .hero-title {
+            font-size: calc(1vw + 2vh + 1vmin);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container" style="height: 75vh">
+        <div class="row h-100 justify-content-center">
+            <div class="col-lg align-content-center text-center text-lg-start">
+                <h1 class="text-black hero-title fw-bold">Challenge your Ideas by Debating on <span
+                        id="rolling-debate">Gun Control</span>
+                </h1>
+                <p class="text-secondary fs-4">Via Live One-on-One Chat</p>
+                <div class="row justify-content-center justify-content-lg-start">
+                    <div class="col col-auto my-1">
+                        <a class="btn btn-lg btn-primary" href="{% url 'debate_index' %}">Explore Debates</a>
+                    </div>
+                    <div class="col col-auto my-1 align-content-center">
+                        <a class="text-secondary fs-5" href="#how-it-works">Learn More</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg align-content-center d-none d-lg-block">
+                {% include 'debate-main.svg' %}
+            </div>
+        </div>
+    </div>
+    <section class="p-5 bg-primary-subtle rounded-5" id="how-it-works">
+        <div class="container">
+            <h2 class="text-center">How it Works</h2>
+            <div class="row mt-4" style="height: fit-content">
+                <div class="col-md-4 my-2">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">1. Chose a Debate</h5>
+                            <p class="card-text">Search or browse for a debate that interests you in the <a
+                                    href="{% url 'debate_index' %}">Debates</a> section.<br>Whether you prefer to debate
+                                politics, social issues, or even whether pineapple belongs on pizza, we have a debate
+                                for you!</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 my-2 ">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">2. Request an Opponent</h5>
+                            <p class="card-text">Our system will match you with an opponent that is interested in the
+                                same debate with the desired stance.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 my-2">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">3. Debate Live</h5>
+                            <p class="card-text">Once matched, you can start debating live with your opponent in a
+                                one-on-one chat.<br>Gotta go? No problem! Your discussions are saved so that you can
+                                continue them later.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="p-5" id="features">
+        <div class="container">
+            <h2 class="text-center">Features</h2>
+            <div class="row mt-4 align-items-center flex-row-reverse">
+                <div class="col-md-6 my-2 text-center">
+                    <i class="bi bi-chat fs-1"></i>
+                </div>
+                <div class="col-md-6 my-2">
+                    <h3>Live One-on-One Chat</h3>
+                    <p>DebateArena offers a live one-on-one chat feature that allows you to debate with your opponent in
+                        real-time. This allows for a more engaging and dynamic debate experience.</p>
+                </div>
+            </div>
+            <div class="row mt-4 align-items-center">
+                <div class="col-md-6 my-2 text-center">
+                    <i class="bi bi-search fs-1"></i>
+                </div>
+                <div class="col-md-6 my-2">
+                    <h3>Semantic Search for Debates (coming soon)</h3>
+                    <p>Our semantic search engine allows you to search for debates based on the meaning of the query
+                        rather than just the keywords. This allows for more accurate and relevant search results.</p>
+                </div>
+            </div>
+            <div class="row mt-4 align-items-center flex-row-reverse">
+                <div class="col-md-6 my-2 text-center">
+                    <i class="bi bi-graph-up fs-1"></i>
+                </div>
+                <div class="col-md-6 my-2">
+                    <h3>Statistics on Debates (coming soon)</h3>
+                    <p>DebateArena provides statistics on debates such as stance distribution, intensity of debates, and
+                        more. This allows you to gain insights into the debates and the community.</p>
+                </div>
+            </div>
+            <div class="row mt-4 align-items-center">
+                <div class="col-md-6 my-2 text-center">
+                    <i class="bi bi-bar-chart fs-1"></i>
+                </div>
+                <div class="col-md-6 my-2">
+                    <h3>Live Debate Analysis (coming soon)</h3>
+                    <p>DebateArena offers live debate analysis features such as sophism detection, fallacy detection,
+                        and
+                        source credibility analysis. This allows you to evaluate the quality of the debate and the
+                        arguments presented.</p>
+                </div>
+            </div>
+            <div class="row mt-4 align-items-center flex-row-reverse">
+                <div class="col-md-6 my-2 text-center">
+                    <i class="bi bi-people fs-1"></i>
+                </div>
+                <div class="col-md-6 my-2">
+                    <h3>AI Opponents (coming soon)</h3>
+                    <p>DebateArena offers AI opponents that you can debate with. These AI opponents are designed to
+                        provide a challenging and engaging debate experience. Test your skills against the AI and see
+                        how you stack up!</p>
+                </div>
+            </div>
+            <div class="row mt-4 align-items-center">
+                <div class="col-md-6 my-2 text-center">
+                    <i class="bi bi-lightbulb fs-1"></i>
+                </div>
+                <div class="col-md-6 my-2">
+                    <h3>More to come...</h3>
+                    <p>DebateArena is constantly evolving and adding new features to enhance your debate experience.
+                        Stay
+                        tuned for more exciting updates!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="p-5 bg-primary-subtle rounded-5" id="ready-to-debate">
+        <div class="container">
+            <h2 class="text-center">Ready to Debate?</h2>
+            <p class="text-center">Join DebateArena today and start challenging your ideas through live one-on-one
+                debates!</p>
+            <div class="text-center">
+                <a class="btn btn-lg btn-primary" href="{% url 'account_signup' %}">Get Started</a>
+            </div>
+        </div>
+    </section>
+    <section class="p-5" id="newsletter">
+        <div class="container">
+            <h2 class="text-center">Stay Updated</h2>
+            <p class="text-center">Sign up for our newsletter to receive updates on new debates, features, and more!</p>
+            <p class="text-center">*Coming soon!*</p>
+        </div>
+    </section>
+
+    <script>
+        const debateNames = ['Gun Control', 'Flat Earth', 'Universal Basic Income', 'Milk or Cereal First', 'Biden vs Trump',
+            'Climate Change', 'R6 Siege vs Valorant', 'iOS vs Android', 'Quebec Independence'];
+        let index = 1;
+        const rollingDebate = $('#rolling-debate');
+        setInterval(() => {
+            rollingDebate.fadeOut(500, () => {
+                rollingDebate.text(debateNames[index]);
+                index = (index + 1) % debateNames.length;
+                rollingDebate.fadeIn(500);
+            });
+        }, 2500);
+    </script>
+{% endblock %}
