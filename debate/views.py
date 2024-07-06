@@ -22,8 +22,8 @@ def index(request):
     return render(request, 'debate/index.html', {'debates': debates})
 
 
-def debate(request, debate_title):
-    debate_instance = get_object_or_404(Debate.objects.select_related('author'), title=debate_title)
+def debate(request, debate_slug):
+    debate_instance = get_object_or_404(Debate.objects.select_related('author'), slug=debate_slug)
 
     # If the request is a POST request, there is an action to be performed
     if request.method == 'POST':
@@ -105,8 +105,8 @@ def debate(request, debate_title):
 
 @login_required
 @require_POST
-def set_stance(request, debate_title):
-    debate_instance = get_object_or_404(Debate, title=debate_title)
+def set_stance(request, debate_slug):
+    debate_instance = get_object_or_404(Debate, slug=debate_slug)
 
     # Check that the request contains the necessary data
     stance = request.POST.get('stance')
@@ -127,7 +127,7 @@ def set_stance(request, debate_title):
 
 
 @login_required
-def request_discussion(request, debate_title):
+def request_discussion(request, debate_slug):
     # Check that the wanted stance is valid
     stance_wanted = request.GET.get('stance_wanted')
     if stance_wanted not in ['for', 'against']:
@@ -135,7 +135,7 @@ def request_discussion(request, debate_title):
     stance_wanted_bool = stance_wanted == 'for'
 
     # Get or 404 the debate instance
-    debate_instance = get_object_or_404(Debate, title=debate_title)
+    debate_instance = get_object_or_404(Debate, slug=debate_slug)
 
     # Get the user's stance on the debate
     user_stance = debate_instance.stance_set.filter(user=request.user).first()
@@ -205,13 +205,13 @@ def request_discussion(request, debate_title):
                      "No user is currently available for a discussion on this debate. Once a user is available, a new discussion will be created and you will be notified.")
 
     # Redirect to the debate page
-    return redirect(debate, debate_title)
+    return redirect(debate, debate_slug)
 
 
 @login_required
 @require_POST
-def vote(request, debate_title):
-    debate_instance = get_object_or_404(Debate, title=debate_title)
+def vote(request, debate_slug):
+    debate_instance = get_object_or_404(Debate, slug=debate_slug)
 
     # Ensure that the direction is present and valid
     direction = request.POST.get('direction')

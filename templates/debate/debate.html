@@ -86,11 +86,11 @@
                  aria-label="Debate with Someone">
                 <button type="submit"
                         class="btn btn-success w-100 {{ has_requested_for|yesno:'request-not-allowed,' }}"
-                        formaction="{% url 'request_discussion' debate.title %}?stance_wanted=for">For
+                        formaction="{% url 'request_discussion' debate.slug %}?stance_wanted=for">For
                 </button>
                 <button type="submit"
                         class="btn btn-danger w-100 {{ has_requested_against|yesno:'request-not-allowed,' }}"
-                        formaction="{% url 'request_discussion' debate.title %}?stance_wanted=against">Against
+                        formaction="{% url 'request_discussion' debate.slug %}?stance_wanted=against">Against
                 </button>
             </div>
         </form>
@@ -212,7 +212,7 @@
             }
 
             $.post(
-                "{% url 'set_stance' debate.title %}",
+                "{% url 'set_stance' debate.slug %}",
                 {stance: stance, csrfmiddlewaretoken: '{{ csrf_token }}'}
             ).fail(function (data) {
                 alert('An error occurred. Please try again. Details: ' + data.responseText);
@@ -281,7 +281,7 @@
 
                 // Send the vote to the server
                 $.post(
-                    "{% url 'vote' debate.title %}",
+                    "{% url 'vote' debate.slug %}",
                     data
                 ).done(function (data) {
                     // Determine which score to update

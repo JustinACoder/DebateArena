@@ -6,8 +6,8 @@ import debate.views
 
 urlpatterns = [
     path('', debate.views.index, name='debate_index'),
-    path('<str:debate_title>/', debate.views.debate, name='debate'),
-    path('<str:debate_title>/stance/', debate.views.set_stance, name='set_stance'),
-    path('<str:debate_title>/request_discussion/', debate.views.request_discussion, name='request_discussion'),
-    path('<str:debate_title>/vote/', debate.views.vote, name='vote'),
+    path('<slug:debate_slug>/', debate.views.debate, name='debate'),
+    path('<slug:debate_slug>/stance/', debate.views.set_stance, name='set_stance'),
+    path('<slug:debate_slug>/request_discussion/', debate.views.request_discussion, name='request_discussion'),
+    path('<slug:debate_slug>/vote/', debate.views.vote, name='vote'),
 ]
