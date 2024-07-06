@@ -28,7 +28,7 @@
                 <ul>
                     {% for stance in stances %}
                         <li>You are <strong>{{ stance.stance|yesno:"for,against" }}</strong> in the debate
-                            <a href="{% url 'debate' stance.debate.title %}"><strong>{{ stance.debate.title }}</strong></a>
+                            <a href="{% url 'debate' stance.debate.slug %}"><strong>{{ stance.debate.title }}</strong></a>
                         </li>
                     {% endfor %}
                 </ul>
@@ -44,7 +44,7 @@
                         <li>Looking for someone <strong>{{ request.stance_wanted|yesno:"for,against" }}</strong>
                             in
                             the debate <a
-                                    href="{% url 'debate' request.debate.title %}"><strong>{{ request.debate.title }}</strong></a>
+                                    href="{% url 'debate' request.debate.slug %}"><strong>{{ request.debate.title }}</strong></a>
                         </li>
                     {% endfor %}
                 </ul>
