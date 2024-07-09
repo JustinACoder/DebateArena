@@ -14,9 +14,6 @@ class Invite(models.Model):
 
     # TODO: Add invite settings such as max uses, expiry date, etc.
 
-    def get_absolute_url(self):
-        return reverse('view_invite', args=[self.code])
-
     def __str__(self):
         return f"Invite {self.code} for {self.debate} created by {self.creator}"
 
