@@ -8,15 +8,11 @@ from debateme.models import Invite, InviteUse
 from discussion.models import Discussion
 
 
-def invite_not_found(request):
-    return render(request, 'debateme/invite_not_found.html')
-
-
 def view_invite(request, invite_code):
     try:
         invite = Invite.objects.select_related('debate', 'creator').get(code=invite_code)
     except Invite.DoesNotExist:
-        return redirect('invite_not_found')
+        return render(request, 'debateme/invite_not_found.html', status=404)
 
     return render(request, 'debateme/view_invite.html', {'invite': invite})
 
@@ -63,3 +59,6 @@ def accept_invite(request, invite_code):
 
     return redirect('specific_discussion', discussion_id=discussion.id)
 
+
+def list_invites(request):
+    return None
