@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
-    "discussion.apps.DiscussionConfig"
+    "discussion.apps.DiscussionConfig",
+    "debateme.apps.DebatemeConfig"
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"

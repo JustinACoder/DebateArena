@@ -116,8 +116,7 @@ def specific_discussion(request, discussion_id):
     context = {
         'discussions_info': discussions_info,
         'message_form': message_form,
-        'discussion_id': discussion_id,
-        'remove_footer': True
+        'discussion_id': discussion_id
     }
 
     return render(request, 'discussion/discussion_board.html', context=context)
