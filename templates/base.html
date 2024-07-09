@@ -75,10 +75,11 @@
                                 </div>
                             </div>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuLink">
+                        <div class="dropdown-menu dropdown-menu-md-end" aria-labelledby="dropdownMenuLink">
                             <a class="dropdown-item"
                                href="{% url 'account_profile' request.user.username %}">Profile</a>
-                            <a class="dropdown-item" href="{% url 'discussion_default' %}">My Discussions</a>
+                            <a class="dropdown-item" href="{% url 'discussion_default' %}">Discussions</a>
+                            <a class="dropdown-item" href="{% url 'list_invites' %}">Invitations</a>
                             <a class="dropdown-item" href="{% url 'account_settings' %}">Settings</a>
                             <div class="dropdown-divider"></div>
                             <form action="{% url 'account_logout' %}"

@@ -1,6 +1,10 @@
 from django.urls import include, path, reverse
 import debateme.views
 
+accounts_urlpatterns = [
+    path('invitations/', debateme.views.list_invites, name='list_invites'),
+]
+
 urlpatterns = [
     path('<str:invite_code>/', include(
         [
