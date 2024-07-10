@@ -1,10 +1,11 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from debate.models import Debate
 from debateme.models import Invite, InviteUse
 from discussion.models import Discussion
 
@@ -71,3 +72,13 @@ def list_invites(request):
     ).order_by('-created_at')
 
     return render(request, 'debateme/list_invites.html', {'invites': invites})
+
+
+@login_required
+@require_POST
+def create_invite(request, debate_slug):
+    debate = get_object_or_404(Debate, slug=debate_slug)
+
+    invite = Invite.objects.create(creator=request.user, debate=debate)
+
+    return redirect(invite)

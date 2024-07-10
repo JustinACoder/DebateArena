@@ -5,6 +5,10 @@ accounts_urlpatterns = [
     path('invitations/', debateme.views.list_invites, name='list_invites'),
 ]
 
+debate_urlpatterns = [
+    path('create/', debateme.views.create_invite, name='create_invite'),
+]
+
 urlpatterns = [
     path('<str:invite_code>/', include(
         [
