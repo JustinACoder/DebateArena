@@ -19,6 +19,7 @@ from django.http import HttpResponseRedirect
 from django.urls import include, path, reverse
 from . import views
 from debateme.urls import accounts_urlpatterns as debateme_accounts_urlpatterns
+from debate.urls import main_urlpatterns as debate_main_urlpatterns
 
 
 accounts_urlpatterns = [
@@ -33,5 +34,5 @@ urlpatterns = [
     path('accounts/', include(accounts_urlpatterns)),
     path('chat/', include('discussion.urls')),
     path('debateme/', include('debateme.urls')),
-    path("__debug__/", include("debug_toolbar.urls")),
-]
+    path('__debug__/', include('debug_toolbar.urls')),
+] + debate_main_urlpatterns
