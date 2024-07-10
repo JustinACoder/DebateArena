@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -60,5 +61,13 @@ def accept_invite(request, invite_code):
     return redirect('specific_discussion', discussion_id=discussion.id)
 
 
+@login_required
 def list_invites(request):
-    return None
+    # Get all invites created by the user and related information such as the number of uses (foreign key from InviteUse to Invite)
+    invites = Invite.objects.filter(
+        creator=request.user
+    ).select_related('debate').annotate(
+        num_uses=Count('inviteuse')
+    ).order_by('-created_at')
+
+    return render(request, 'debateme/list_invites.html', {'invites': invites})
