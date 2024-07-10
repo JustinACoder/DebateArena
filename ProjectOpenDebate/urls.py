@@ -18,13 +18,20 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import include, path, reverse
 from . import views
+from debateme.urls import accounts_urlpatterns as debateme_accounts_urlpatterns
+
+
+accounts_urlpatterns = [
+    path('', include('allauth.urls')),
+    path('', include('users.urls')),
+] + debateme_accounts_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.main, name='main'),
     path('d/', include('debate.urls')),
-    path('accounts/', include('allauth.urls')),
-    path('accounts/', include('users.urls')),
+    path('accounts/', include(accounts_urlpatterns)),
     path('chat/', include('discussion.urls')),
+    path('debateme/', include('debateme.urls')),
     path("__debug__/", include("debug_toolbar.urls")),
 ]

@@ -94,6 +94,10 @@
                 </button>
             </div>
         </form>
+        <form action="{% url 'create_invite' debate.slug %}" method="post" target="_blank">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary mt-2">Create Invite Link</button>
+        </form>
     {% else %}
         <p>You must be connected to debate with someone. Please <a
                 href="{% url 'account_login' %}?next={{ request.path }}">log
