@@ -17,9 +17,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def index(request):
+def explore(request):
     debates = Debate.objects.all()
-    return render(request, 'debate/index.html', {'debates': debates})
+    return render(request, 'debate/explore.html', {'debates': debates})
 
 
 def debate(request, debate_slug):

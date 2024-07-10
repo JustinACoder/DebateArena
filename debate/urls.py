@@ -1,12 +1,9 @@
-from django.http import HttpResponseRedirect
-from django.urls import include, path, reverse, re_path
-from voting.views import xmlhttprequest_vote_on_object
-
+from django.urls import include, path
 import debate.views
 from debateme.urls import debate_urlpatterns as debateme_debate_urlpatterns
 
 urlpatterns = [
-    path('', debate.views.index, name='debate_index'),
+    path('', debate.views.explore, name='debate_explore'),
     path('<slug:debate_slug>/', include([
         path('', debate.views.debate, name='debate'),
         path('stance/', debate.views.set_stance, name='set_stance'),
