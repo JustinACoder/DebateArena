@@ -18,8 +18,20 @@ logger = logging.getLogger(__name__)
 
 
 def explore(request):
-    debates = Debate.objects.all()
-    return render(request, 'debate/explore.html', {'debates': debates})
+
+    sections = [
+        ('Trending', Debate.objects.get_trending()),
+        ('Popular', Debate.objects.get_popular()),
+        ('Recent', Debate.objects.get_recent()),
+        ('Controversial', Debate.objects.get_controversial()),
+        ('Other', Debate.objects.get_random())
+    ]
+
+    context = {
+        'sections': sections,
+        'include_footer': True
+    }
+    return render(request, 'debate/explore.html', context)
 
 
 def debate(request, debate_slug):
@@ -81,13 +93,13 @@ def debate(request, debate_slug):
     comment_vote_scores = Vote.objects.get_scores_in_bulk(comments)
 
     # Annotate the debate with the user's stance, discussion requests and vote
-    debate_instance.vote = debate_vote
+    debate_instance.user_vote = debate_vote
     debate_instance.vote_score, debate_instance.num_votes = debate_score['score'], debate_score['num_votes']
 
     # Annotate the comments with the vote information
     for comment in comments:
         key = str(comment.id)
-        comment.vote = comment_votes.get(key)
+        comment.user_vote = comment_votes.get(key)
         comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
 
     # Define the context to be passed to the template
@@ -233,3 +245,9 @@ def vote(request, debate_slug):
 
     # Return the new score
     return JsonResponse(new_score_dict)
+
+
+@require_POST
+def search(request):
+    # TODO: implement search functionality (which requires at least full-text search which is not supported by SQLite)
+    return HttpResponse('Not implemented', status=501)

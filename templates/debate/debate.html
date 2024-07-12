@@ -30,9 +30,9 @@
             <div class="row align-items-center g-2" role="group" aria-label="Debate Vote">
                 <div class="col-auto">
                     <button type="button"
-                            class="btn fs-4 py-0 btn-outline-success{{ debate.vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
+                            class="btn fs-4 py-0 btn-outline-success{{ debate.user_vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
                             data-bs-toggle="button"
-                            aria-pressed="{{ debate.vote.is_upvote|default:"false" }}"
+                            aria-pressed="{{ debate.user_vote.is_upvote|default:"false" }}"
                             data-vote="1">
                         <i class="bi bi-hand-thumbs-up"></i>
                     </button>
@@ -43,9 +43,9 @@
                 </div>
                 <div class="col-auto">
                     <button type="button"
-                            class="btn fs-4 py-0 btn-outline-danger{{ debate.vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
+                            class="btn fs-4 py-0 btn-outline-danger{{ debate.user_vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
                             data-bs-toggle="button"
-                            aria-pressed="{{ debate.vote.is_downvote|default:"false" }}"
+                            aria-pressed="{{ debate.user_vote.is_downvote|default:"false" }}"
                             data-vote="-1">
                         <i class="bi bi-hand-thumbs-down"></i>
                     </button>
@@ -139,9 +139,9 @@
                              aria-label="Comment Vote">
                             <div class="col-auto">
                                 <button type="button"
-                                        class="btn fs-5 py-0 btn-outline-success{{ comment.vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
+                                        class="btn fs-5 py-0 btn-outline-success{{ comment.user_vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
                                         data-bs-toggle="button"
-                                        aria-pressed="{{ comment.vote.is_upvote|default:"false" }}"
+                                        aria-pressed="{{ comment.user_vote.is_upvote|default:"false" }}"
                                         data-comment-id="{{ comment.id }}"
                                         data-vote="1">
                                     <i class="bi bi-hand-thumbs-up"></i>
@@ -153,9 +153,9 @@
                             </div>
                             <div class="col-auto">
                                 <button type="button"
-                                        class="btn fs-5 py-0 btn-outline-danger{{ comment.vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
+                                        class="btn fs-5 py-0 btn-outline-danger{{ comment.user_vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
                                         data-bs-toggle="button"
-                                        aria-pressed="{{ comment.vote.is_downvote|default:"false" }}"
+                                        aria-pressed="{{ comment.user_vote.is_downvote|default:"false" }}"
                                         data-comment-id="{{ comment.id }}"
                                         data-vote="-1">
                                     <i class="bi bi-hand-thumbs-down"></i>

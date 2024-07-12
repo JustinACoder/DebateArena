@@ -1,13 +1,62 @@
 {% extends 'base.html' %}
 
+{% block head %}
+    <style>
+        .ellipsis-text-card-4-lines {
+            min-height: 6em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+        }
+        
+        .ellipsis-title-card {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<h1>Index of Debates</h1>
-{# display each debate as a link #}
-<ul>
-    {% for debate in debates %}
-        <li>
-            <a href="{% url 'debate' debate.slug %}">{{ debate.title }}</a>
-        </li>
+    <section class="bg-primary-subtle py-5 mb-4" style="height: 50vh">
+        <div class="container text-center d-flex align-items-center justify-content-center flex-column h-100">
+            <h1 class="mb-4">Search for a Debate</h1>
+            <form action="{% url 'debate_search' %}" method="get" class="w-100">
+                <div class="input-group mb-3 mx-auto" style="max-width: 650px">
+                    <input type="text" class="form-control" placeholder="Ex: Gun Control" name="q" aria-label="Search"
+                           aria-describedby="search-icon" required>
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i> Search</button>
+                </div>
+            </form>
+        </div>
+    </section>
+    {% for section_name, debates in sections %}
+        <section class="bg-light mb-4">
+            <div class="container-fluid px-3">
+                <h2>{{ section_name }}</h2>
+                <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
+                    {% for debate in debates %}
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title ellipsis-title-card mb-3 col-auto">{{ debate.title }}</h5>
+                                    <p class="card-text col ellipsis-text-card-4-lines">{{ debate.description|truncatechars:250 }}</p>
+                                    <a href="{% url 'debate' debate.slug %}"
+                                       class="btn btn-primary stretched-link col-auto"
+                                       role="button">Select Debate</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
     {% endfor %}
-</ul>
+    <section class="bg-primary-subtle py-5">
+        <div class="container text-center">
+            <h2>Whoops! You've reached the end!</h2>
+        </div>
+    </section>
 {% endblock %}
