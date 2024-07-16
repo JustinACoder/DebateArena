@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 def explore(request):
 
     sections = [
-        ('Trending', Debate.objects.get_trending()),
-        ('Popular', Debate.objects.get_popular()),
-        ('Recent', Debate.objects.get_recent()),
-        ('Controversial', Debate.objects.get_controversial()),
-        ('Other', Debate.objects.get_random())
+        ('Trending', Debate.objects.get_trending()[:10]),
+        ('Popular', Debate.objects.get_popular()[:10]),
+        ('Recent', Debate.objects.get_recent()[:10]),
+        ('Controversial', Debate.objects.get_controversial()[:10]),
+        ('Other', Debate.objects.get_random()[:10])
     ]
 
     context = {
