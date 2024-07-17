@@ -10,11 +10,16 @@
             -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
         }
-        
+
         .ellipsis-title-card {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(325px, 100%), 1fr));
         }
     </style>
 {% endblock %}
@@ -36,17 +41,15 @@
         <section class="bg-light mb-4">
             <div class="container-fluid px-lg-5 px-3">
                 <h2>{{ section_name }}</h2>
-                <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
+                <div class="grid-cards gap-4">
                     {% for debate in debates %}
-                        <div class="col">
-                            <div class="card h-100">
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title ellipsis-title-card mb-3 col-auto">{{ debate.title }}</h5>
-                                    <p class="card-text col ellipsis-text-card-4-lines">{{ debate.description|truncatechars:250 }}</p>
-                                    <a href="{% url 'debate' debate.slug %}"
-                                       class="btn btn-outline-primary stretched-link col-auto"
-                                       role="button">Select Debate</a>
-                                </div>
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title ellipsis-title-card mb-3 col-auto">{{ debate.title }}</h5>
+                                <p class="card-text col ellipsis-text-card-4-lines">{{ debate.description|truncatechars:250 }}</p>
+                                <a href="{% url 'debate' debate.slug %}"
+                                   class="btn btn-outline-primary stretched-link col-auto"
+                                   role="button">Select Debate</a>
                             </div>
                         </div>
                     {% endfor %}

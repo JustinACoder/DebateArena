@@ -82,6 +82,11 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(325px, 100%), 1fr));
+        }
     </style>
 {% endblock %}
 
