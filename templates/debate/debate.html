@@ -13,6 +13,7 @@
         .hide-bottom-description {
             -webkit-line-clamp: 20;
             -webkit-mask-image: -webkit-linear-gradient(black 0%, black 90%, transparent 100%);
+            mask-image: linear-gradient(black 0%, black 90%, transparent 100%);
         }
 
         #comment-text {
@@ -337,12 +338,22 @@
             {% endif %}
         }
 
-        stanceWantedFor.change(updateStartDebatingBtn);
-        stanceWantedAgainst.change(updateStartDebatingBtn);
+        function uncheckIfEnabled(checkbox) {
+            checkbox.prop('checked', checkbox.prop('disabled'));
+        }
+
+        stanceWantedFor.change(function () {
+            uncheckIfEnabled(stanceWantedAgainst);
+            updateStartDebatingBtn();
+        });
+        stanceWantedAgainst.change(function () {
+            uncheckIfEnabled(stanceWantedFor);
+            updateStartDebatingBtn();
+        });
 
         closeDebateNowModal.click(function () {
-            stanceWantedFor.prop('checked', stanceWantedFor.prop('disabled'));
-            stanceWantedAgainst.prop('checked', stanceWantedAgainst.prop('disabled'));
+            uncheckIfEnabled(stanceWantedFor);
+            uncheckIfEnabled(stanceWantedAgainst);
             updateStartDebatingBtn();
         });
 
