@@ -1,0 +1,14 @@
+<div>
+    <h2 class="my-2">Suggestions</h2>
+    {% for debate in suggested_debates %}
+        <div class="card w-100 mb-4">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title ellipsis-title-card mb-3 col-auto">{{ debate.title }}</h5>
+                <p class="card-text col ellipsis-text-card-4-lines">{{ debate.description|truncatechars:250 }}</p>
+                <a href="{% url 'debate' debate.slug %}"
+                   class="btn btn-outline-primary stretched-link col-auto"
+                   role="button">Select Debate</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>

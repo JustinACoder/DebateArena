@@ -34,7 +34,7 @@
     </section>
     {% for section_name, debates in sections %}
         <section class="bg-light mb-4">
-            <div class="container-fluid px-3">
+            <div class="container-fluid px-lg-5 px-3">
                 <h2>{{ section_name }}</h2>
                 <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
                     {% for debate in debates %}
@@ -44,7 +44,7 @@
                                     <h5 class="card-title ellipsis-title-card mb-3 col-auto">{{ debate.title }}</h5>
                                     <p class="card-text col ellipsis-text-card-4-lines">{{ debate.description|truncatechars:250 }}</p>
                                     <a href="{% url 'debate' debate.slug %}"
-                                       class="btn btn-primary stretched-link col-auto"
+                                       class="btn btn-outline-primary stretched-link col-auto"
                                        role="button">Select Debate</a>
                                 </div>
                             </div>
