@@ -9,13 +9,13 @@ from voting.models import Vote
 
 
 class DebateManager(models.Manager):
-    def get_popular(self, count=10):
-        return self.annotate(num_votes=Count('vote')).order_by('-num_votes')[:count]
+    def get_popular(self):
+        return self.annotate(num_votes=Count('vote')).order_by('-num_votes')
 
-    def get_recent(self, count=10):
-        return self.order_by('-date')[:count]
+    def get_recent(self):
+        return self.order_by('-date')
 
-    def get_trending(self, count=10):
+    def get_trending(self):
         """
         We will keep it simple for now and order by the ratio of votes between now and the maximum between -48 hours
         and the debate's creation date. Then, we multiply by the log2 of the number of votes to give more weight to debates
@@ -39,9 +39,9 @@ class DebateManager(models.Manager):
         # Multiply by the log2 of the number of votes (+1 to avoid log(0))
         score = percentage_votes_in_period * Log(2, num_votes_total + 1)
 
-        return self.annotate(num_votes=num_votes_total).annotate(score=score).order_by('-score')[:count]
+        return self.annotate(num_votes=num_votes_total).annotate(score=score).order_by('-score')
 
-    def get_controversial(self, count=10):
+    def get_controversial(self):
         """
         To determine the controversy of a debate, we will calculate the standard deviation of the stances.
         The lower the standard deviation, the more controversial the debate is since it means that the stances are
@@ -56,10 +56,10 @@ class DebateManager(models.Manager):
             ) / (0.8 * Count('stance'))
         )
 
-        return self.annotate(stance_stddev=stddev).order_by('stance_stddev')[:count]
+        return self.annotate(stance_stddev=stddev).order_by('stance_stddev')
 
-    def get_random(self, count=10):
-        return self.order_by('?')[:count]
+    def get_random(self):
+        return self.order_by('?')
 
 
 class Debate(models.Model):

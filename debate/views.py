@@ -5,6 +5,7 @@ from django.db.models import OuterRef, Subquery, F, Exists, Count, Case, When
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotAllowed, \
     JsonResponse, HttpResponse
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from voting.models import Vote
 
@@ -18,13 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 def explore(request):
-
     sections = [
-        ('Trending', Debate.objects.get_trending()),
-        ('Popular', Debate.objects.get_popular()),
-        ('Recent', Debate.objects.get_recent()),
-        ('Controversial', Debate.objects.get_controversial()),
-        ('Other', Debate.objects.get_random())
+        ('Trending', Debate.objects.get_trending()[:10]),
+        ('Popular', Debate.objects.get_popular()[:10]),
+        ('Recent', Debate.objects.get_recent()[:10]),
+        ('Controversial', Debate.objects.get_controversial()[:10]),
+        ('Other', Debate.objects.get_random()[:10])
     ]
 
     context = {
@@ -34,42 +34,43 @@ def explore(request):
     return render(request, 'debate/explore.html', context)
 
 
+@login_required
+@require_POST
+def comment(request, debate_slug):
+    debate_instance = get_object_or_404(Debate, slug=debate_slug)
+
+    # Respond depending on the action parameter
+    action = request.POST.get('action')
+    if action == 'add':
+        # Create a comment using the form data
+        comment_form = CommentForm(request.POST)
+
+        # Save the comment to the database if the form is valid
+        if comment_form.is_valid():
+            comment_form.instance.debate = debate_instance
+            comment_form.instance.author = request.user
+            comment_form.save()
+
+            # Redirect to debate page
+            return redirect('debate', debate_slug=debate_slug)
+        else:
+            print(comment_form.errors)
+            # Return a bad request if the form is invalid
+            return HttpResponseBadRequest()
+    else:
+        return HttpResponseBadRequest()
+
+
 def debate(request, debate_slug):
     debate_instance = get_object_or_404(Debate.objects.select_related('author'), slug=debate_slug)
 
-    # If the request is a POST request, there is an action to be performed
-    if request.method == 'POST':
-        if 'action' not in request.POST:
-            return HttpResponseBadRequest()
-
-        # Depending on the action, perform the appropriate action
-        if request.POST['action'] == 'add_comment':
-            # Check that the user is authenticated
-            if not request.user.is_authenticated:
-                return HttpResponseForbidden()
-
-            # Create a comment using the form data
-            comment_form = CommentForm(request.POST)
-
-            # Save the comment to the database if the form is valid
-            if comment_form.is_valid():
-                # TODO: this is a anti-pattern
-                comment_instance = comment_form.save(commit=False)
-                comment_instance.debate = debate_instance
-                comment_instance.author = request.user
-                comment_instance.save()
-
-                # Redirect to the same page to avoid resubmission of the form
-                return HttpResponseRedirect(request.path_info)
-        else:
-            # If the action is not recognized, return an error
-            return HttpResponseBadRequest()
-    else:
-        comment_form = CommentForm()
+    # Create a form for adding comments
+    comment_form = CommentForm()
 
     # Get the user's stance on the debate
     # Note we check using the user_id instead of user since it could be AnonymousUser (not authenticated)
     user_stance = Stance.objects.filter(user_id=request.user.id, debate=debate_instance).first()
+    stance_str = None if user_stance is None else 'for' if user_stance.stance else 'against'
 
     # Get the user's discussion requests on the debate
     # Note we check using the user_id instead of user since it could be AnonymousUser (not authenticated)
@@ -78,7 +79,7 @@ def debate(request, debate_slug):
     has_requested_against = user_discussion_requests.filter(stance_wanted=False).exists()
 
     # Get all comments for the debate sorted by date
-    comments = debate_instance.comment_set.order_by('date_added').select_related('author')
+    comments = debate_instance.comment_set.order_by('-date_added').select_related('author')
 
     # Get the user's vote on the debate
     debate_vote = Vote.objects.get_for_user(debate_instance, request.user)
@@ -102,14 +103,18 @@ def debate(request, debate_slug):
         comment.user_vote = comment_votes.get(key)
         comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
 
+    # Get suggestions for the user
+    suggested_debates = Debate.objects.get_random().exclude(id=debate_instance.id)[:10]
+
     # Define the context to be passed to the template
     context = {
         'debate': debate_instance,
-        'stance': user_stance,
+        'stance': stance_str,
         'has_requested_for': has_requested_for,
         'has_requested_against': has_requested_against,
         'comments': comments,
-        'comment_form': comment_form
+        'comment_form': comment_form,
+        'suggested_debates': suggested_debates,
     }
 
     return render(request, 'debate/debate.html', context)
@@ -122,11 +127,11 @@ def set_stance(request, debate_slug):
 
     # Check that the request contains the necessary data
     stance = request.POST.get('stance')
-    if stance not in ['for', 'against', 'reset']:
+    if stance not in ['for', 'against', 'unset']:
         return HttpResponseBadRequest()
 
     # Update the user's stance on the debate
-    if stance == 'reset':
+    if stance == 'unset':
         debate_instance.stance_set.filter(user=request.user).delete()
     else:
         stance_bool = stance == 'for'
@@ -135,13 +140,14 @@ def set_stance(request, debate_slug):
     # Delete any pending discussion requests for the user on this debate
     DiscussionRequest.objects.filter(requester=request.user, debate=debate_instance).delete()
 
-    return HttpResponse(status=204)
+    return redirect('debate', debate_slug=debate_slug)
 
 
+@require_POST
 @login_required
 def request_discussion(request, debate_slug):
     # Check that the wanted stance is valid
-    stance_wanted = request.GET.get('stance_wanted')
+    stance_wanted = request.POST.get('stance_wanted')
     if stance_wanted not in ['for', 'against']:
         return HttpResponseBadRequest()
     stance_wanted_bool = stance_wanted == 'for'
@@ -202,7 +208,7 @@ def request_discussion(request, debate_slug):
         discussion_instance.notify_participants()
 
         # Redirect to the discussion page
-        return redirect(specific_discussion, discussion_instance.id)
+        return redirect('specific_discussion', discussion_id=discussion_instance.id)
 
     # Otherwise, create a new request and display the debate page
     DiscussionRequest.objects.create(
@@ -213,11 +219,11 @@ def request_discussion(request, debate_slug):
 
     # Display a message to the user
     # TODO: make modal instead? Also, is this really a success message?
-    messages.success(request,
-                     "No user is currently available for a discussion on this debate. Once a user is available, a new discussion will be created and you will be notified.")
+    messages.info(request,
+                  "No user is currently available for a discussion on this debate. Once a user is available, a new discussion will be created and you will be notified.")
 
     # Redirect to the debate page
-    return redirect(debate, debate_slug)
+    return redirect('debate', debate_slug=debate_slug)
 
 
 @login_required

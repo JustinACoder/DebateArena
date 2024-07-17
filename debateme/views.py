@@ -48,7 +48,7 @@ def accept_invite(request, invite_code):
     # If the user has already used the invite, redirect them to the discussion
     try:
         existing_discussion_id = invite.inviteuse_set.get(user=request.user).resulting_discussion_id
-        return redirect(reverse('discussion', args=[existing_discussion_id]))
+        return redirect('specific_discussion', discussion_id=existing_discussion_id)
     except InviteUse.DoesNotExist:
         pass
 

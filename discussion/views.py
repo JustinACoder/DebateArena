@@ -107,7 +107,7 @@ def specific_discussion(request, discussion_id):
     # If this view is called with a discussion_id but the query is empty, it means that the discussion doesn't exist
     # OR the user is not a participant. Therefore, we will redirect to the default discussion view.
     if not discussions_info and discussion_id:
-        return redirect(discussion_default)  # TODO: should we return an error instead?
+        return redirect('discussion_default')  # TODO: should we return an error instead?
 
     # Get Message form
     message_form = MessageForm()
