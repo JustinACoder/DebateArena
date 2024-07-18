@@ -21,18 +21,24 @@
     <!-- TODO: figure out the bestway to include these libraries (ex: end of body? CDN? etc...) -->
     <script src="{% static 'libraries/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'libraries/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'libraries/da-toast.min.js' %}"></script>
 
     <style>
         :root {
             --bs-font-sans-serif: 'Montserrat', sans-serif;
+            --nav-height: 56px;
         }
 
         section {
-            scroll-margin-top: 56px;
+            scroll-margin-top: var(--nav-height);
         }
 
         #main-content {
-            padding-top: 56px;
+            padding-top: var(--nav-height);
+        }
+
+        #toastPlacement {
+            margin-top: var(--nav-height);
         }
     </style>
 
@@ -100,6 +106,11 @@
     </div>
 </nav>
 
+<div aria-live="polite" aria-atomic="true">
+    <div class="toast-container p-3 position-fixed mt-5 top-0 start-50 translate-middle-x" id="toastPlacement">
+    </div>
+</div>
+
 <!-- Content -->
 <div id="main-content" class="bg-light flex-grow-1">
     {% block content %}
@@ -151,9 +162,20 @@
                 </div>
             </section>
         </div>
-        <div class="text-center"><a href="https://storyset.com/people" class="text-white">People illustrations by Storyset</a></div>
+        <div class="text-center"><a href="https://storyset.com/people" class="text-white">People illustrations by
+            Storyset</a></div>
         <div class="text-center p-3">© DebateArena 2024</div>
     </footer>
+{% endif %}
+{% if messages %}
+    <script>
+        {% for message in messages %}
+            {# The goal of escapejs is not to prevent code execution, but to prevent syntax errors when #}
+            {# the message contains characters that would break the JavaScript code. #}
+            {# However, we want to be able to have any html tags/script inside the content here #}
+            $.toast('{{ message.tags }}', '{{ message | escapejs}}');
+        {% endfor %}
+    </script>
 {% endif %}
 </body>
 </html>

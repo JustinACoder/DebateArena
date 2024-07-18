@@ -3,7 +3,6 @@
 
 {% block content %}
     <h1>Login</h1>
-    {% include 'messages_display.html' %}
     <form method="post">
         {% csrf_token %}
         {{ form|crispy }}
