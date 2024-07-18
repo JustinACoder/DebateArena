@@ -139,7 +139,6 @@ def retrieve_messages(request, discussion_id):
     page = int(page)
     include_discussion_info = include_discussion_info == 'true'
 
-
     # From the page number, calculate the start (inclusive) and end (exclusive) indexes
     first_page_size = settings.ENDLESS_PAGINATION_SETTINGS['FIRST_PAGE_SIZE']
     other_page_size = settings.ENDLESS_PAGINATION_SETTINGS['PAGE_SIZE']

@@ -51,6 +51,8 @@ def comment(request, debate_slug):
             comment_form.instance.author = request.user
             comment_form.save()
 
+            messages.success(request, 'Comment added successfully')
+
             # Redirect to debate page
             return redirect('debate', debate_slug=debate_slug)
         else:
@@ -140,6 +142,8 @@ def set_stance(request, debate_slug):
     # Delete any pending discussion requests for the user on this debate
     DiscussionRequest.objects.filter(requester=request.user, debate=debate_instance).delete()
 
+    messages.success(request, 'Stance set successfully')
+
     return redirect('debate', debate_slug=debate_slug)
 
 
@@ -207,6 +211,8 @@ def request_discussion(request, debate_slug):
         # Notify the participants about the new discussion
         discussion_instance.notify_participants()
 
+        messages.success(request, 'Debate started successfully')
+
         # Redirect to the discussion page
         return redirect('specific_discussion', discussion_id=discussion_instance.id)
 
@@ -218,7 +224,6 @@ def request_discussion(request, debate_slug):
     )
 
     # Display a message to the user
-    # TODO: make modal instead? Also, is this really a success message?
     messages.info(request,
                   "No user is currently available for a discussion on this debate. Once a user is available, a new discussion will be created and you will be notified.")
 
