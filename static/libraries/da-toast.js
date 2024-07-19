@@ -26,7 +26,7 @@
                 <div class="toast rounded-pill align-items-center text-white ${typeToConfig[type].bg}" role="alert" aria-live="assertive" aria-atomic="true">
                     <div class="d-flex align-items-center">
                         <div class="toast-body col d-flex align-items-center py-1 ps-3">
-                            <i class="bi ${typeToConfig[type].icon} me-2 fs-1"></i>
+                            <i class="bi ${typeToConfig[type].icon} me-2 fs-2"></i>
                             ${message}
                         </div>
                         <button type="button" class="btn-close btn-close-white col-auto pe-3 me-2" style="height: 2em" data-bs-dismiss="toast" aria-label="Close"></button>
