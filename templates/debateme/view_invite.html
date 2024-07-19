@@ -19,11 +19,7 @@
                                aria-label="Invite link" aria-describedby="button-copy" id="invite-link">
                     </div>
                     <hr class="my-4">
-                    <p>To delete this invitation, click the button below:</p>
-                    <form action="{% url 'delete_invite' invite.code %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Delete Invitation</button>
-                    </form>
+                    <p>To manage your invitations, visit the <a href="{% url 'list_invites' %}">Invitations</a> page.</p>
                 {% else %}
                     <p>You have been invited to debate on <a
                             href="{% url 'debate' invite.debate.slug %}">{{ invite.debate.title }}</a> with <a

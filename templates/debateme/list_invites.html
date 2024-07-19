@@ -35,7 +35,10 @@
                     </td>
                     <td>{{ invite.num_uses }}</td>
                     <td>
-                        <a href="{% url 'delete_invite' invite.code %}" class="btn btn-danger">Delete</a>
+                        <form action="{% url 'delete_invite' invite.code %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
                     </td>
                 </tr>
             {% empty %}

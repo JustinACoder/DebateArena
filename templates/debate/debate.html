@@ -82,7 +82,7 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .grid-cards {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(min(325px, 100%), 1fr));
@@ -216,7 +216,7 @@
                                 <div class="modal-dialog modal-dialog-centered">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="set-stance-label">Debate Now!</h5>
+                                            <h5 class="modal-title" id="debate-now-label">Debate Now!</h5>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                     aria-label="Close"></button>
                                         </div>
@@ -240,8 +240,7 @@
                                                 <li>
                                                     <span class="fw-bold">Choose a Stance to Debate With</span><br>
                                                     <p>Do you want to debate with someone who has the same stance as you
-                                                        or
-                                                        someone with the opposite stance? Or both?</p>
+                                                        or someone with the opposite stance?</p>
                                                     <form action="{% url 'request_discussion' debate.slug %}"
                                                           method="post"
                                                           id="request-discussion-form">
@@ -282,6 +281,48 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="modal"
+                                    data-bs-target="#invitation-modal">
+                                Invite to Debate
+                            </button>
+                            <div class="modal top" id="invitation-modal" tabindex="-1"
+                                 aria-labelledby="invitation-label"
+                                 aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="invitation-label">Invite to Debate</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Create a link and share it to invite your peers to debate with you.</p>
+                                            <p>When someone accepts your invitation, you will be notified and a new
+                                                <a href="{% url 'discussion_default' %}">discussion</a> will be created.
+                                            </p>
+                                            {% if stance is None %}
+                                                <p><strong>Warning:</strong> You have not set your stance yet. We
+                                                    recommend you to set your stance before inviting others to debate
+                                                    with you
+                                                    to clearly communicate your position.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                Close
+                                            </button>
+                                            <form action="{% url 'create_invite' debate.slug %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-primary"
+                                                        value="Submit">Create Invitation
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 {% include 'debate/components/data.html' %}
@@ -300,7 +341,7 @@
         const currentStance = '{{ stance|default_if_none:"unset" }}';
         {% if not user.is_authenticated %}
             const setStanceBtn = $('#set-stance-btn');
-            
+
             setStanceBtn.click(function () {
                 window.location.href = "{% url 'account_login' %}?next={{ request.get_full_path }}";
             });
