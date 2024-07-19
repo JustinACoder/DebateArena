@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from allauth.account.forms import SignupForm
+from allauth.account.forms import SignupForm, ResetPasswordKeyForm
 
 
 class ViewEditUserForm(forms.ModelForm):
@@ -16,9 +16,16 @@ class ViewEditUserForm(forms.ModelForm):
 
 
 class CustomSignupForm(SignupForm):
-    # For now, its exactly the same as the default SignupForm except that we do not include help_text
+    # For now, it's exactly the same as the default SignupForm except that we do not include help_text
     # for the password field.
     def __init__(self, *args, **kwargs):
         super(CustomSignupForm, self).__init__(*args, **kwargs)
         self.fields['password1'].help_text = None
 
+
+class CustomResetPasswordKeyForm(ResetPasswordKeyForm):
+    # For now, it's exactly the same as the default ResetPasswordForm except that we do not include help_text
+    # for the password field.
+    def __init__(self, *args, **kwargs):
+        super(CustomResetPasswordKeyForm, self).__init__(*args, **kwargs)
+        self.fields['password1'].help_text = None

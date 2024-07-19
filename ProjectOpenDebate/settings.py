@@ -174,7 +174,10 @@ ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
 ACCOUNT_USERNAME_VALIDATORS = 'users.validators.username_validators'
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
-ACCOUNT_FORMS = {'signup': 'users.forms.CustomSignupForm'}
+ACCOUNT_FORMS = {
+    'signup': 'users.forms.CustomSignupForm',
+    'reset_password_from_key': 'users.forms.CustomResetPasswordKeyForm',
+}
 
 # Email backend settings
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # TODO: Change to real email backend in production
