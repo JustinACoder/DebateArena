@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
@@ -28,6 +29,9 @@ def delete_invite(request, invite_code):
         return HttpResponseNotFound()
 
     invite.delete()
+
+    messages.success(request, f"Invite deleted successfully.")
+
     return HttpResponse(status=204)
 
 
@@ -48,6 +52,9 @@ def accept_invite(request, invite_code):
     # If the user has already used the invite, redirect them to the discussion
     try:
         existing_discussion_id = invite.inviteuse_set.get(user=request.user).resulting_discussion_id
+
+        messages.info(request, f"Invitation already accepted. Redirected to existing debate.")
+
         return redirect('specific_discussion', discussion_id=existing_discussion_id)
     except InviteUse.DoesNotExist:
         pass
@@ -58,6 +65,8 @@ def accept_invite(request, invite_code):
 
     # Notify the participants of the new discussion
     discussion.notify_participants()
+
+    messages.success(request, f"Debate started successfully.")
 
     return redirect('specific_discussion', discussion_id=discussion.id)
 
@@ -80,5 +89,7 @@ def create_invite(request, debate_slug):
     debate = get_object_or_404(Debate, slug=debate_slug)
 
     invite = Invite.objects.create(creator=request.user, debate=debate)
+
+    messages.success(request, f"Invite created successfully.")
 
     return redirect(invite)
