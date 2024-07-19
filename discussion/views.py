@@ -165,11 +165,15 @@ def retrieve_messages(request, discussion_id):
     ).values('id', 'author__username', 'text', 'created_at', 'is_current_user'))
 
     # Initialize response data
+    # To determine if there is a next page, we try to get one more message than the page size
+    # If we retrieve page size + 1 messages, there is a next page, otherwise there isn't
+    # If there is a next page, we remove the last message from the results since it belongs to the next page
+    # Otherwise, we return all the messages since they all belong to the current page
     results = list(messages[start:end + 1])
-    data = {
-        'messages': results[:-1],
-        'has_next': len(results) == end + 1 - start,  # If there is one more message than the page size, there is a next page
-    }
+    expected_message_count = end - start + 1
+    has_next = len(results) == expected_message_count
+    messages_to_return = results[:-1] if has_next else results
+    data = {'messages': messages_to_return, 'has_next': has_next}
 
     # If the user wants discussion info, include it in the response
     if include_discussion_info:
