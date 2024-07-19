@@ -99,7 +99,7 @@
                     <a class="btn btn-outline-primary row-cols-a"
                        href="{% url 'account_login' %}?next={{ request.GET.next|default:request.path }}">Login</a>
                     <a class="btn btn-primary"
-                       href="{% url 'account_signup' %}?next={{ request.GET.next|default:request.path }}">Register</a>
+                       href="{% url 'account_signup' %}?next={{ request.GET.next|default:request.path }}">Sign Up</a>
                 {% endif %}
             </div>
         </div>

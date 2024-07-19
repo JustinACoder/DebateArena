@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from allauth.account.forms import SignupForm
 
 
 class ViewEditUserForm(forms.ModelForm):
@@ -12,3 +13,12 @@ class ViewEditUserForm(forms.ModelForm):
     class Meta:
         model = get_user_model()
         fields = ['username', 'email', 'first_name', 'last_name']
+
+
+class CustomSignupForm(SignupForm):
+    # For now, its exactly the same as the default SignupForm except that we do not include help_text
+    # for the password field.
+    def __init__(self, *args, **kwargs):
+        super(CustomSignupForm, self).__init__(*args, **kwargs)
+        self.fields['password1'].help_text = None
+
