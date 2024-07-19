@@ -51,7 +51,7 @@ def comment(request, debate_slug):
             comment_form.instance.author = request.user
             comment_form.save()
 
-            messages.success(request, 'Comment added successfully')
+            messages.success(request, 'Comment added successfully.')
 
             # Redirect to debate page
             return redirect('debate', debate_slug=debate_slug)
@@ -142,7 +142,7 @@ def set_stance(request, debate_slug):
     # Delete any pending discussion requests for the user on this debate
     DiscussionRequest.objects.filter(requester=request.user, debate=debate_instance).delete()
 
-    messages.success(request, 'Stance set successfully')
+    messages.success(request, 'Stance set successfully.')
 
     return redirect('debate', debate_slug=debate_slug)
 
@@ -211,7 +211,7 @@ def request_discussion(request, debate_slug):
         # Notify the participants about the new discussion
         discussion_instance.notify_participants()
 
-        messages.success(request, 'Debate started successfully')
+        messages.success(request, 'Debate started successfully.')
 
         # Redirect to the discussion page
         return redirect('specific_discussion', discussion_id=discussion_instance.id)

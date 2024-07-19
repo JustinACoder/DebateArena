@@ -30,7 +30,7 @@ def delete_invite(request, invite_code):
 
     invite.delete()
 
-    messages.success(request, f"Invite deleted successfully")
+    messages.success(request, f"Invite deleted successfully.")
 
     return HttpResponse(status=204)
 
@@ -66,7 +66,7 @@ def accept_invite(request, invite_code):
     # Notify the participants of the new discussion
     discussion.notify_participants()
 
-    messages.success(request, f"Debate started successfully")
+    messages.success(request, f"Debate started successfully.")
 
     return redirect('specific_discussion', discussion_id=discussion.id)
 
@@ -90,6 +90,6 @@ def create_invite(request, debate_slug):
 
     invite = Invite.objects.create(creator=request.user, debate=debate)
 
-    messages.success(request, f"Invite created successfully")
+    messages.success(request, f"Invite created successfully.")
 
     return redirect(invite)
