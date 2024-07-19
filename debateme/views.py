@@ -30,7 +30,7 @@ def delete_invite(request, invite_code):
 
     invite.delete()
 
-    messages.success(request, f"Invite deleted successfully.")
+    messages.success(request, f"Invitation deleted successfully.")
 
     return redirect('list_invites')
 
