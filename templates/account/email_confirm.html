@@ -1,20 +1,23 @@
-{% extends 'base.html' %}
+{% extends 'account/base_account.html' %}
 {% load crispy_forms_filters %}
 
-{% block content %}
-    <h1>Confirm Email Address</h1>
+{% block inner_content %}
+    <h1 class="text-center">Confirm Email Address</h1>
     {% if confirmation %}
         {% if can_confirm %}
-            <p>Please confirm that <a href="mailto:{{ confirmation.email_address.email }}">{{ confirmation.email_address.email }}</a> is an email address for user {{ confirmation.email_address.user }}.</p>
+            <p class="my-4">Please confirm that {{ confirmation.email_address.email }}
+                is an email address for user <a href="{% url 'account_profile' confirmation.email_address.user %}">{{ confirmation.email_address.user }}</a>.</p>
             <form method="post">
                 {% csrf_token %}
                 {{ form|crispy }}
-                <button type="submit" class="btn btn-primary">Confirm</button>
+                <button type="submit" class="btn btn-primary rounded-pill p-3 mt-2 w-100">Confirm</button>
             </form>
         {% else %}
-            <p>Unable to confirm {{ confirmation.email_address.email }} because it is already confirmed by a different account.</p>
+            <p class="my-4">Unable to confirm {{ confirmation.email_address.email }} because it is already confirmed by a
+                different account.</p>
         {% endif %}
     {% else %}
-        <p>This email confirmation link expired or is invalid. Please <a href="{% url 'account_email' %}">issue a new email confirmation request</a>.</p>
+        <p class="my-4">This email confirmation link expired or is invalid. Please <a href="{% url 'account_email' %}">issue a
+            new email confirmation request</a>.</p>
     {% endif %}
 {% endblock %}
