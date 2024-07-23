@@ -99,7 +99,7 @@
                         <h1>{{ debate.title }}</h1>
                     </div>
                     <div class="col-auto">
-                        <div class="row align-items-center gx-2" role="group" aria-label="Debate Vote">
+                        <div class="row align-items-center gx-2 mb-1" role="group" aria-label="Debate Vote">
                             <div class="col-auto">
                                 <button type="button"
                                         class="btn fs-4 p-0{{ debate.user_vote.is_upvote|yesno:" active selected," }} btn-vote border-0"
@@ -110,8 +110,8 @@
                                 </button>
                             </div>
                             <div class="col-auto">
-                    <span class="ms-auto fs-4 text-center align-top d-block" style="min-width: 1.5em"
-                          id="debate-score">{{ debate.vote_score }}</span>
+                                <span class="ms-auto fs-4 text-center align-top d-block" style="min-width: 1.5em"
+                                      id="debate-score">{{ debate.vote_score }}</span>
                             </div>
                             <div class="col-auto">
                                 <button type="button"
