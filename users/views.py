@@ -50,3 +50,8 @@ def account_profile(request, username):
     }
 
     return render(request, 'user/profile.html', context)
+
+
+@login_required
+def account_profile_default(request):
+    return redirect('account_profile', username=request.user.username)
