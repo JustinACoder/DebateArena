@@ -20,33 +20,12 @@ def account_profile(request, username):
     # Get the user object for the profile
     profile_user = get_object_or_404(User, username=username)
 
-    # Get the list of pending discussion requests
-    pending_requests = profile_user.discussionrequest_set.select_related('debate').all()
-
-    # Get the list of stances taken
-    stances = profile_user.stance_set.select_related('debate').all()
-
-    # Get some stats
-    # TODO: transform into a single query
-    # - Number of stance taken
-    # - Number of pending requests
-    # - Number of conversations started
-    # - Number of messages sent
-    # - Number of comments posted
-    stats = {
-        'stance_count': stances.count(),
-        'pending_request_count': pending_requests.count(),
-        'discussion_count': Discussion.objects.filter(
-            Q(participant1=profile_user) | Q(participant2=profile_user)).count(),
-        'message_count': profile_user.message_set.count(),
-        'comment_count': profile_user.comment_set.count(),
-    }
+    # Get recent stances
+    stances = profile_user.stance_set.order_by('-created_at')[:10]
 
     context = {
         'profile_user': profile_user,
-        'pending_requests': pending_requests,
-        'stances': stances,
-        'stats': stats,
+        'recent_stances': stances,
     }
 
     return render(request, 'user/profile.html', context)

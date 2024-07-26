@@ -1,0 +1,19 @@
+{# very similar to debate_related.html #}
+<h2 class="my-2">Recent Stances</h2>
+<div class="grid-cards gap-4">
+    {% for stance in recent_stances %}
+        <div class="card">
+            <div class="card-body d-flex flex-column">
+                <h5 class="col-auto card-title">{{ stance.debate.title }}
+                    <span class="badge{{ stance.stance|yesno:" bg-success, bg-danger" }}">
+                        {{ stance.stance|yesno:"For, Against" }}
+                    </span>
+                </h5>
+                <p class="card-text col ellipsis-text-card-4-lines">{{ stance.debate.description|truncatechars:250 }}</p>
+                <a href="{% url 'debate' stance.debate.slug %}"
+                   class="btn btn-outline-primary stretched-link col-auto"
+                   role="button">Select Debate</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>

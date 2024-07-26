@@ -105,6 +105,7 @@ class Stance(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
     stance = models.BooleanField()  # False for "against", True for "for" # TODO: think of a more complex stance system
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('user', 'debate')  # A user can only have one stance on a debate
