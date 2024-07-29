@@ -1,15 +1,51 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Model
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
-from discussion.models import Discussion
-from users.forms import ViewEditUserForm
-from allauth.account.views import EmailView
+from django.views.decorators.http import require_POST
+
+from users.forms import ViewEditUserForm, ProfileForm
+
+from users.models import Profile
+
+
+def get_user_profile(user):
+    try:
+        return user.profile
+    except Profile.DoesNotExist:
+        return None
 
 
 @login_required
 def account_settings(request):
-    return render(request, 'user/settings.html')
+    # TODO: Create profile on user creation?
+    profile = get_user_profile(request.user)
+
+    context = {
+        'profile_form': ProfileForm(instance=profile),
+    }
+
+    return render(request, 'user/settings.html', context)
+
+
+@login_required
+@require_POST
+def account_profile_edit(request, username):
+    if username != request.user.username:
+        return redirect('account_profile', username)
+
+    profile = get_user_profile(request.user)
+
+    profile_form = ProfileForm(request.POST, instance=profile)
+
+    if profile_form.is_valid():
+        profile_form.save()
+        messages.success(request, 'Profile updated successfully')
+    else:
+        messages.error(request, 'Profile update failed')
+
+    return redirect('account_settings')
 
 
 def account_profile(request, username):
