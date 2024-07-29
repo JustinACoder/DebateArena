@@ -9,9 +9,10 @@ from users.forms import ViewEditUserForm, ProfileForm
 
 
 @login_required
-def account_settings(request):
+def account_settings(request, tab='account'):
     context = {
         'profile_form': ProfileForm(instance=request.user.profile),
+        'tab': tab,
     }
 
     return render(request, 'user/settings.html', context)
@@ -31,7 +32,7 @@ def account_profile_edit(request, username):
     else:
         messages.error(request, 'Profile update failed')
 
-    return redirect('account_settings')
+    return redirect('account_settings', tab='profile')
 
 
 def account_profile(request, username):
