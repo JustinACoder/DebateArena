@@ -7,23 +7,11 @@ from django.views.decorators.http import require_POST
 
 from users.forms import ViewEditUserForm, ProfileForm
 
-from users.models import Profile
-
-
-def get_user_profile(user):
-    try:
-        return user.profile
-    except Profile.DoesNotExist:
-        return None
-
 
 @login_required
 def account_settings(request):
-    # TODO: Create profile on user creation?
-    profile = get_user_profile(request.user)
-
     context = {
-        'profile_form': ProfileForm(instance=profile),
+        'profile_form': ProfileForm(instance=request.user.profile),
     }
 
     return render(request, 'user/settings.html', context)
@@ -35,9 +23,7 @@ def account_profile_edit(request, username):
     if username != request.user.username:
         return redirect('account_profile', username)
 
-    profile = get_user_profile(request.user)
-
-    profile_form = ProfileForm(request.POST, instance=profile)
+    profile_form = ProfileForm(request.POST, instance=request.user.profile)
 
     if profile_form.is_valid():
         profile_form.save()
