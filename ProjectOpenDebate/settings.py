@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
-    "discussion.apps.DiscussionConfig"
+    "discussion.apps.DiscussionConfig",
+    "debateme.apps.DebatemeConfig"
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -163,15 +164,6 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Messages framework
-MESSAGE_TAGS = {
-    messages.DEBUG: 'alert-info',
-    messages.INFO: 'alert-info',
-    messages.SUCCESS: 'alert-success',
-    messages.WARNING: 'alert-warning',
-    messages.ERROR: 'alert-danger',
-}
-
 # Allauth settings
 ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[DebateArena] '
@@ -187,6 +179,13 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # TODO: Change to real email backend in production
 EMAIL_SUBJECT_PREFIX = '[DebateArena] '
 DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
+
+# Pagination settings
+ENDLESS_PAGINATION_SETTINGS = {
+    'FIRST_PAGE_SIZE': 50,  # The size of the first page of a paginated list
+    'PAGE_SIZE': 30,  # The size of the rest of the pages
+}
+
 
 # Admins
 ADMINS = [

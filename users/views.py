@@ -9,9 +9,6 @@ from allauth.account.views import EmailView
 
 @login_required
 def account_settings(request):
-    # Get the user object
-    user = request.user  # type: User
-
     return render(request, 'user/settings.html')
 
 

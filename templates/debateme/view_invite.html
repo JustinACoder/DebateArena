@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container h-100">
+        <div class="d-flex h-100 justify-content-center align-items-center">
+            <div class="text-center">
+                <h1>Invitation to Debate</h1>
+                {% if invite.creator == user %}
+                    <p>You have created this invitation to debate on <a
+                            href="{% url 'debate' invite.debate.slug %}">{{ invite.debate.title }}</a>
+                        on {{ invite.created_at }}
+                    </p>
+                    <p>Share this link with your friends to invite them to debate with you:</p>
+                    <div class="input-group mb-3">
+                        <button class="btn btn-outline-secondary" type="button" id="button-copy"
+                                onclick="copyToClipboard()">Copy
+                        </button>
+                        <input type="text" class="form-control" value="{{ request.build_absolute_uri }}"
+                               aria-label="Invite link" aria-describedby="button-copy" id="invite-link">
+                    </div>
+                    <hr class="my-4">
+                    <p>To manage your invitations, visit the <a href="{% url 'list_invites' %}">Invitations</a> page.</p>
+                {% else %}
+                    <p>You have been invited to debate on <a
+                            href="{% url 'debate' invite.debate.slug %}">{{ invite.debate.title }}</a> with <a
+                            href="{% url 'account_profile' invite.creator.username %}">{{ invite.creator.username }}</a>.
+                    </p>
+                    <button class="btn btn-secondary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#what-is-this"
+                            aria-expanded="false" aria-controls="what-is-this">
+                        What is this?
+                    </button>
+                    <div class="collapse mt-2" id="what-is-this">
+                        <div class="card card-body">
+                            <p>When you accept this invitation, you will be matched with the creator of this invitation
+                                to
+                                debate on the topic of <a
+                                        href="{% url 'debate' invite.debate.slug %}">{{ invite.debate.title }}</a>.</p>
+                            <p>Debates are conducted in a one-on-one chat format. You can debate live or continue the
+                                debate later.</p>
+                            <p>To learn more about DebateArena and how it works, visit the <a href="{% url 'main' %}">homepage</a>.
+                            </p>
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    {% if user.is_authenticated %}
+                        <form action="{% url 'accept_invite' invite.code %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Start Debating</button>
+                        </form>
+                    {% else %}
+                        <p><a href="{% url 'account_login' %}?next={{ request.path }}">Log in</a> or <a
+                                href="{% url 'account_signup' %}?next={{ request.path }}">sign up</a> to accept
+                            the invitation.</p>
+                    {% endif %}
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+    <script>
+        const copyText = $('#invite-link');
+        const copyButton = $('#button-copy');
+
+        function copyToClipboard() {
+            navigator.clipboard.writeText(copyText.val());
+
+            // Change button text to "Copied!" and change color
+            copyButton.text('Copied!');
+            copyButton.removeClass('btn-outline-secondary');
+            copyButton.addClass('btn-success');
+            setTimeout(() => {
+                copyButton.text('Copy');
+                copyButton.removeClass('btn-success');
+                copyButton.addClass('btn-outline-secondary');
+            }, 2000);
+        }
+    </script>
+{% endblock %}

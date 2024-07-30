@@ -1,13 +1,21 @@
 from django.http import HttpResponseRedirect
-from django.urls import include, path, reverse, re_path
-from voting.views import xmlhttprequest_vote_on_object
-
+from django.shortcuts import redirect
+from django.urls import include, path, reverse
 import debate.views
+from debateme.urls import debate_urlpatterns as debateme_debate_urlpatterns
+
+main_urlpatterns = [
+    path('explore/', debate.views.explore, name='debate_explore'),
+    path('search/', debate.views.search, name='debate_search'),
+]
 
 urlpatterns = [
-    path('', debate.views.index, name='debate_index'),
-    path('<str:debate_title>/', debate.views.debate, name='debate'),
-    path('<str:debate_title>/stance/', debate.views.set_stance, name='set_stance'),
-    path('<str:debate_title>/request_discussion/', debate.views.request_discussion, name='request_discussion'),
-    path('<str:debate_title>/vote/', debate.views.vote, name='vote'),
+    path('', lambda request: redirect('debate_explore')),
+    path('<slug:debate_slug>/', include([
+        path('', debate.views.debate, name='debate'),
+        path('stance/', debate.views.set_stance, name='set_stance'),
+        path('request_discussion/', debate.views.request_discussion, name='request_discussion'),
+        path('vote/', debate.views.vote, name='vote'),
+        path('comment/', debate.views.comment, name='comment'),
+    ] + debateme_debate_urlpatterns)),  # TODO: figure out a better way to manage these URLs...
 ]

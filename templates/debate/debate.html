@@ -1,8 +1,57 @@
 {% extends 'base.html' %}
-{% load crispy_forms_filters %}
 
 {% block head %}
     <style>
+        #debate-description {
+            white-space: pre-line;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            display: -webkit-box;
+            margin-bottom: 0;
+        }
+
+        .hide-bottom-description {
+            -webkit-line-clamp: 20;
+            -webkit-mask-image: -webkit-linear-gradient(black 0%, black 90%, transparent 100%);
+            mask-image: linear-gradient(black 0%, black 90%, transparent 100%);
+        }
+
+        #comment-text {
+            transition-duration: 0.2s;
+        }
+
+        #comment-text:focus {
+            border-bottom-color: var(--bs-dark) !important;
+            border-bottom-width: calc(3 * var(--bs-border-width)) !important;
+        }
+
+        .comment-div {
+            padding-left: 1em;
+            border-left: 3px solid var(--bs-primary);
+        }
+
+        .btn-vote.selected[data-vote="1"] {
+            color: var(--bs-success);
+        }
+
+        .btn-vote.selected[data-vote="-1"] {
+            color: var(--bs-danger);
+        }
+
+        .btn-vote[data-vote="1"]:hover {
+            color: var(--bs-success);
+            font-weight: bolder;
+        }
+
+        .btn-vote[data-vote="-1"]:hover {
+            color: var(--bs-danger);
+            font-weight: bolder;
+        }
+
+        ol > li::marker {
+            font-weight: bold;
+        }
+
         .stance {
             opacity: 50%;
         }
@@ -18,232 +67,340 @@
         .request-not-allowed {
             opacity: 50%;
         }
+
+        .ellipsis-text-card-4-lines {
+            min-height: 6em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+        }
+
+        .ellipsis-title-card {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(325px, 100%), 1fr));
+        }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="row align-items-center my-2">
-        <div class="col-auto">
-            <h1 class="mb-0">{{ debate.title }}</h1>
-        </div>
-        <div class="col-auto">
-            <div class="row align-items-center g-2" role="group" aria-label="Debate Vote">
-                <div class="col-auto">
-                    <button type="button"
-                            class="btn fs-4 py-0 btn-outline-success{{ debate.vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
-                            data-bs-toggle="button"
-                            aria-pressed="{{ debate.vote.is_upvote|default:"false" }}"
-                            data-vote="1">
-                        <i class="bi bi-hand-thumbs-up"></i>
-                    </button>
-                </div>
-                <div class="col-auto">
-                    <span class="ms-auto fs-4 text-center align-top"
-                          id="debate-score">{{ debate.vote_score }}</span>
-                </div>
-                <div class="col-auto">
-                    <button type="button"
-                            class="btn fs-4 py-0 btn-outline-danger{{ debate.vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
-                            data-bs-toggle="button"
-                            aria-pressed="{{ debate.vote.is_downvote|default:"false" }}"
-                            data-vote="-1">
-                        <i class="bi bi-hand-thumbs-down"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% include 'messages_display.html' %}
-    <p><strong>Author</strong>: {{ debate.author }}</p>
-    <p><strong>Date</strong>: {{ debate.date }}</p>
-    <p><strong>Description</strong>: {{ debate.description }}</p>
-
-    <!-- Set your stance -->
-    <h2>Set Your Stance</h2>
-    {% if request.user.is_authenticated %}
-        <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
-             aria-label="Set Your Stance">
-            <button type="button" class="btn btn-success w-100 stance {% if stance.stance %}active{% endif %}"
-                    id="stance-for-btn" data-stance="for">For
-            </button>
-            <button type="button" class="btn btn-primary" id="stance-reset-btn">Reset</button>
-            <button type="button"
-                    class="btn btn-danger w-100 stance {% if stance.stance == False %}active{% endif %}"
-                    id="stance-against-btn" data-stance="against">Against
-            </button>
-        </div>
-    {% else %}
-        <p>You must be connected to set your stance. Please <a href="{% url 'account_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
-    {% endif %}
-
-    <!-- Debate with someone -->
-    <h2>Debate with Someone</h2>
-    {% if request.user.is_authenticated %}
-        <form method="post" id="request-discussion-form">
-            {% csrf_token %}
-            <div class="btn-group btn-group-lg d-flex w-75" style="max-width: 512px" role="group"
-                 aria-label="Debate with Someone">
-                <button type="submit"
-                        class="btn btn-success w-100 {{ has_requested_for|yesno:'request-not-allowed,' }}"
-                        formaction="{% url 'request_discussion' debate.title %}?stance_wanted=for">For
-                </button>
-                <button type="submit"
-                        class="btn btn-danger w-100 {{ has_requested_against|yesno:'request-not-allowed,' }}"
-                        formaction="{% url 'request_discussion' debate.title %}?stance_wanted=against">Against
-                </button>
-            </div>
-        </form>
-    {% else %}
-        <p>You must be connected to debate with someone. Please <a
-                href="{% url 'account_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
-    {% endif %}
-
-    <!-- Add comments -->
-    <hr>
-    <h2>Add a Comment</h2>
-    {# Display the form only if the user is connected #}
-    {% if user.is_authenticated %}
-        <form method="post">
-            {% csrf_token %}
-            {{ comment_form | crispy }}
-            <input type="hidden" name="action" value="add_comment">
-            <button type="submit" class="btn btn-primary">Add Comment</button>
-        </form>
-    {% else %}
-        <p>You must be connected to add a comment. Please <a href="{% url 'account_login' %}?next={{ request.path }}">log
-            in</a> or <a href="{% url 'account_signup' %}?next={{ request.path }}">register</a>.</p>
-    {% endif %}
-
-    <!-- Display comments -->
-    <h2>Comments</h2>
-    {# If there are no comments, display a message #}
-    {% if comments|length == 0 %}
-        <p>No comments yet.</p>
-        {# Otherwise, display the comments #}
-    {% else %}
-        <ul class="list-unstyled">
-            {# For each comment, display basic info #}
-            {% for comment in comments %}
-                <li>
-                    <div class="border border-secondary rounded p-2 my-2">
-                        <span class="d-block fw-bold">{{ comment.author }}</span>
-                        <span class="d-block fw-light small">{{ comment.date_added }}</span>
-                        <p>{{ comment.text }}</p>
-                        <div class="row align-items-center g-2" role="group"
-                             aria-label="Comment Vote">
+    <div class="container-xxl py-3">
+        <div class="row">
+            <div class="col-lg-8 col-xl-9">
+                <div class="row align-items-center my-2">
+                    <div class="col-auto">
+                        <h1>{{ debate.title }}</h1>
+                    </div>
+                    <div class="col-auto">
+                        <div class="row align-items-center gx-2" role="group" aria-label="Debate Vote">
                             <div class="col-auto">
                                 <button type="button"
-                                        class="btn fs-5 py-0 btn-outline-success{{ comment.vote.is_upvote|yesno:" active selected," }} btn-vote p-1"
+                                        class="btn fs-4 p-0{{ debate.user_vote.is_upvote|yesno:" active selected," }} btn-vote border-0"
                                         data-bs-toggle="button"
-                                        aria-pressed="{{ comment.vote.is_upvote|default:"false" }}"
-                                        data-comment-id="{{ comment.id }}"
+                                        aria-pressed="{{ debate.user_vote.is_upvote|default:"false" }}"
                                         data-vote="1">
-                                    <i class="bi bi-hand-thumbs-up"></i>
+                                    <i class="bi bi-hand-thumbs-up{{ debate.user_vote.is_upvote|yesno:"-fill," }}"></i>
                                 </button>
                             </div>
                             <div class="col-auto">
-                                <span class="ms-auto fs-6 text-center align-top"
-                                      id="comment-{{ comment.id }}-score">{{ comment.vote_score }}</span>
+                    <span class="ms-auto fs-4 text-center align-top d-block" style="min-width: 1.5em"
+                          id="debate-score">{{ debate.vote_score }}</span>
                             </div>
                             <div class="col-auto">
                                 <button type="button"
-                                        class="btn fs-5 py-0 btn-outline-danger{{ comment.vote.is_downvote|yesno:" active selected," }} btn-vote p-1"
+                                        class="btn fs-4 p-0{{ debate.user_vote.is_downvote|yesno:" active selected," }} btn-vote border-0"
                                         data-bs-toggle="button"
-                                        aria-pressed="{{ comment.vote.is_downvote|default:"false" }}"
-                                        data-comment-id="{{ comment.id }}"
+                                        aria-pressed="{{ debate.user_vote.is_downvote|default:"false" }}"
                                         data-vote="-1">
-                                    <i class="bi bi-hand-thumbs-down"></i>
+                                    <i class="bi bi-hand-thumbs-down{{ debate.user_vote.is_downvote|yesno:"-fill," }}"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+                </div>
+                <p id="debate-description">{{ debate.description }}</p>
+                <button class="btn btn-link w-100 text-center text-black" id="show-more-btn"><i
+                        class="bi bi-chevron-down"></i> Show More
+                </button>
+                <div class="my-4 py-4 rounded bg-primary-subtle">
+                    <h3 class="w-100 text-center mb-4">Participate in the Debate</h3>
+                    <div class="row justify-content-center align-items-center">
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="modal"
+                                    data-bs-target="#set-stance-modal">
+                                Set Your Stance
+                            </button>
+                            <div class="modal" id="set-stance-modal" tabindex="-1"
+                                 aria-labelledby="set-stance-label"
+                                 aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="set-stance-label">Set Your Stance</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Setting your stance contributes to the debate and allows you to debate
+                                                with
+                                                others.</p>
+                                            <p>If you are unsure about your stance, we recommend you to read the debate
+                                                description and the comments to make an informed decision. You can
+                                                always
+                                                change your stance later if you change your mind.</p>
+                                            <hr>
+                                            <p>I, <strong>{{ request.user.username }}</strong>, am hereby declaring my
+                                                stance as...</p>
+                                            <form class="w-100 text-center" action="{% url 'set_stance' debate.slug %}"
+                                                  method="post" id="set-stance-form">
+                                                {% csrf_token %}
+                                                <select class="form-select mx-auto w-auto border-0 fs-1 fw-bolder text-center"
+                                                        aria-label="Select your stance"
+                                                        name="stance"
+                                                        id="stance-select">
+                                                    <option class="text-secondary fs-1 fw-bolder"
+                                                            value="unset"{% if stance is None %} selected{% endif %}>No
+                                                        Stance
+                                                    </option>
+                                                    <option class="text-success fs-1 fw-bolder"
+                                                            value="for"{% if stance == 'for' %} selected{% endif %}>
+                                                        For
+                                                    </option>
+                                                    <option class="text-danger fs-1 fw-bolder"
+                                                            value="against"{% if stance == 'against' %}
+                                                            selected{% endif %}>
+                                                        Against
+                                                    </option>
+                                                </select>
+                                            </form>
+                                            {% if has_requested_for or has_requested_against %}
+                                                <br>
+                                                <p><strong>Warning:</strong> You are currently waiting to debate with
+                                                someone{{ has_requested_for|yesno:"for," }}
+                                                {% if has_requested_for and has_requested_against %}
+                                                    and {% endif %}{{ has_requested_against|yesno:"against," }}.
+                                                Changing your stance will cancel
+                                                {% if has_requested_for and has_requested_against %}
+                                                    these requests{% else %}this request{% endif %}.
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                                                    id="stance-modal-close">
+                                                Close
+                                            </button>
+                                            <button type="submit" class="btn btn-primary" form="set-stance-form"
+                                                    value="Submit" id="set-stance-btn">
+                                                Set Stance
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="modal"
+                                    data-bs-target="#debate-now-modal">
+                                Debate Now
+                            </button>
+                            <div class="modal top" id="debate-now-modal" tabindex="-1"
+                                 aria-labelledby="debate-now-label"
+                                 aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="debate-now-label">Debate Now!</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Put your debating skills to the test by debating with someone else
+                                                right now!</p>
+                                            <ol class="marker-bold">
+                                                <li>
+                                                    <span class="fw-bold">Take a Stance</span><br>
+                                                    <p>
+                                                        {% if stance is not None %}
+                                                            <i class="bi bi-check-circle-fill text-success"></i> You
+                                                            have set your stance to
+                                                            <strong>{{ stance }}</strong>.
+                                                        {% else %}
+                                                            <i class="bi bi-x-circle-fill text-danger"></i> You have not
+                                                            set your stance yet.
+                                                        {% endif %}
+                                                    </p>
+                                                </li>
+                                                <li>
+                                                    <span class="fw-bold">Choose a Stance to Debate With</span><br>
+                                                    <p>Do you want to debate with someone who has the same stance as you
+                                                        or someone with the opposite stance?</p>
+                                                    <form action="{% url 'request_discussion' debate.slug %}"
+                                                          method="post"
+                                                          id="request-discussion-form">
+                                                        {% csrf_token %}
+                                                        <p>I want to debate with someone who is...</p>
+                                                        <div class="form-check">
+                                                            <input type="checkbox" id="stance-wanted-for"
+                                                                   name="stance_wanted"
+                                                                   class="form-check-input"
+                                                                   value="for"
+                                                                    {{ has_requested_for|yesno:"checked disabled," }}>
+                                                            <label for="stance-wanted-for"
+                                                                   class="form-check-label">For{{ has_requested_for|yesno:" (Request Pending)," }}</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input type="checkbox" id="stance-wanted-against"
+                                                                   name="stance_wanted"
+                                                                   class="form-check-input"
+                                                                   value="against"
+                                                                    {{ has_requested_against|yesno:"checked disabled," }}>
+                                                            <label for="stance-wanted-against" class="form-check-label">Against{{ has_requested_against|yesno:" (Request Pending)," }}</label>
+                                                        </div>
+                                                    </form>
+                                                </li>
+                                            </ol>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                                                    id="debate-now-modal-close">
+                                                Close
+                                            </button>
+                                            <button type="submit" class="btn btn-primary" id="debate-now-btn"
+                                                    form="request-discussion-form" value="Submit"
+                                                    disabled>Start Debating
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="modal"
+                                    data-bs-target="#invitation-modal">
+                                Invite to Debate
+                            </button>
+                            <div class="modal top" id="invitation-modal" tabindex="-1"
+                                 aria-labelledby="invitation-label"
+                                 aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="invitation-label">Invite to Debate</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Create a link and share it to invite your peers to debate with you.</p>
+                                            <p>When someone accepts your invitation, you will be notified and a new
+                                                <a href="{% url 'discussion_default' %}">discussion</a> will be created.
+                                            </p>
+                                            {% if stance is None %}
+                                                <p><strong>Warning:</strong> You have not set your stance yet. We
+                                                    recommend you to set your stance before inviting others to debate
+                                                    with you
+                                                    to clearly communicate your position.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                Close
+                                            </button>
+                                            <form action="{% url 'create_invite' debate.slug %}" method="post">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-primary"
+                                                        value="Submit">Create Invitation
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% include 'debate/components/data.html' %}
+                {% include 'debate/components/comments.html' %}
+            </div>
+            <div class="col-lg-4 col-xl-3">
+                {% include 'debate/components/debate_related.html' %}
+            </div>
+        </div>
+    </div>
 
     <script>
         /****************** STANCES ******************/
-        let stanceBtns = $('.stance');
-        let stanceResetBtn = $('#stance-reset-btn');
-        let has_stance = {{ has_stance|yesno:'true,true,false' }};
+        const stanceSelect = $('#stance-select');
+        const stanceModalClose = $('#stance-modal-close');
+        const currentStance = '{{ stance|default_if_none:"unset" }}';
+        {% if not user.is_authenticated %}
+            const setStanceBtn = $('#set-stance-btn');
 
-        // Reset the stance when the user clicks on the "Reset" button
-        stanceResetBtn.click(function () {
-            // if no stance is selected, do nothing
-            if (!stanceBtns.hasClass('active')) {
-                return
-            }
-
-            let is_updated = updateStance('reset');
-            if (!is_updated) {
-                return
-            }
-
-            stanceBtns.removeClass('active');
-        });
-
-        // Update the stance when the user clicks on the stance buttons
-        stanceBtns.click(function () {
-            // if the user clicks on the active button, do nothing
-            if ($(this).hasClass('active')) {
-                return
-            }
-
-            let stance = $(this).data('stance');
-            let is_updated = updateStance(stance);
-            if (!is_updated) {
-                return
-            }
-
-            stanceBtns.removeClass('active');
-            $(this).addClass('active');
-        });
-
-        function updateStance(stance) {
-            // TODO: Make confirmation dialog prettier (using Bootstrap modal for example)
-            // TODO: Are we sure we want to display these ugly confirm dialogs every time?
-            if (stance === 'reset' && has_stance && !confirm("WARNING: You are about to reset your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
-                return false;
-            } else if (stance !== 'reset' && has_stance && !confirm("You are about to change your stance. This will delete your current discussion requests for this debate. Are you sure you want to continue?")) {
-                return false;
-            }
-
-            $.post(
-                "{% url 'set_stance' debate.title %}",
-                {stance: stance, csrfmiddlewaretoken: '{{ csrf_token }}'}
-            ).fail(function (data) {
-                alert('An error occurred. Please try again. Details: ' + data.responseText);
-                return false;
+            setStanceBtn.click(function () {
+                window.location.href = "{% url 'account_login' %}?next={{ request.get_full_path }}";
             });
+        {% endif %}
 
-            has_stance = stance !== 'reset';
-
-            requestDiscussionBtns.removeClass('request-not-allowed');
-
-            return true;
+        function updateSelect() {
+            // set the color of the select based on the selected option
+            let selectedOption = stanceSelect.find(':selected');
+            let selectedClasses = selectedOption.attr('class');
+            stanceSelect.removeClass('text-success text-danger text-secondary');
+            stanceSelect.addClass(selectedClasses);
         }
 
-        /****************** DISCUSSION REQUEST ******************/
-        let requestDiscussionBtns = $('#request-discussion-form button');
+        $(document).ready(updateSelect);
+        stanceSelect.change(updateSelect);
 
-        // Ensure that the user can't request a discussion if no stance is selected
-        requestDiscussionBtns.click(function (event) {
-            if (!stanceBtns.hasClass('active')) {
-                event.preventDefault();
-                $(this)[0].setCustomValidity('Please select a stance before requesting a discussion.');
-                $(this)[0].reportValidity();
-            } else if ($(this).hasClass('request-not-allowed')) {
-                event.preventDefault();
-                $(this)[0].setCustomValidity('You have already requested a discussion with someone with this stance.');
-                $(this)[0].reportValidity();
-            } else {
-                requestDiscussionBtns.each(function () {
-                    $(this)[0].setCustomValidity('');
-                });
-            }
+        // When the user closes the modal, reset the select to the current stance
+        stanceModalClose.click(function () {
+            stanceSelect.val(currentStance);
+            updateSelect();
+        });
+
+
+        /****************** DISCUSSION REQUEST ******************/
+        const stanceWantedFor = $('#stance-wanted-for');
+        const stanceWantedAgainst = $('#stance-wanted-against');
+        const debateNowBtn = $('#debate-now-btn');
+        const closeDebateNowModal = $('#debate-now-modal-close');
+
+        function updateStartDebatingBtn() {
+            {% if stance is None %}
+                return;
+            {% else %}
+                if ((stanceWantedFor.is(':checked') && !stanceWantedFor.prop('disabled')) ||
+                    (stanceWantedAgainst.is(':checked') && !stanceWantedAgainst.prop('disabled'))) {
+                    debateNowBtn.prop('disabled', false);
+                } else {
+                    debateNowBtn.prop('disabled', true);
+                }
+            {% endif %}
+        }
+
+        function uncheckIfEnabled(checkbox) {
+            checkbox.prop('checked', checkbox.prop('disabled'));
+        }
+
+        stanceWantedFor.change(function () {
+            uncheckIfEnabled(stanceWantedAgainst);
+            updateStartDebatingBtn();
+        });
+        stanceWantedAgainst.change(function () {
+            uncheckIfEnabled(stanceWantedFor);
+            updateStartDebatingBtn();
+        });
+
+        closeDebateNowModal.click(function () {
+            uncheckIfEnabled(stanceWantedFor);
+            uncheckIfEnabled(stanceWantedAgainst);
+            updateStartDebatingBtn();
         });
 
         /****************** VOTING ******************/
@@ -252,67 +409,166 @@
         {# TODO: cleanup, this is a bit unreadable and hacky #}
         // When the user clicks on a vote button
         voteBtns.click(function () {
-            let direction = $(this).data('vote');
-            let isAlreadySelected = $(this).hasClass('selected');
-            let thisButton = $(this);
+            {% if not request.user.is_authenticated %}
+                window.location.href = "{% url 'account_login' %}?next={{ request.get_full_path }}";
+            {% else %}
+                let direction = $(this).data('vote');
+                let isAlreadySelected = $(this).hasClass('selected');
+                let thisButton = $(this);
 
-            // If the button is already active, remove the vote
-            if (isAlreadySelected) {
-                direction = 0;
-            }
-
-            // Define the data to send to the server
-            let data = {
-                direction: direction,
-                csrfmiddlewaretoken: '{{ csrf_token }}'
-            };
-
-            // Add comment_id if it exists
-            let comment_id = thisButton.data('comment-id');
-            if (comment_id) {
-                data.comment_id = comment_id;
-            }
-
-            // Send the vote to the server
-            $.post(
-                "{% url 'vote' debate.title %}",
-                data
-            ).done(function (data) {
-                // Determine which score to update
-                let score;
-                if (comment_id) {
-                    score = $('#comment-' + comment_id + '-score');
-                } else {
-                    score = debateVoteScore;
-                }
-
-                // Update the score
-                score.text(data.score);
-
-                // Untoggle the other button if it was toggled and unselect it
-                let otherButton = thisButton.parent().parent().find('.btn').not(thisButton); {# TODO: wth is this? We need to change the implementation so that its more robust #}
-                if (otherButton.hasClass('selected')) {
-                    otherButton.button('toggle');
-                    // remove the selected class
-                    otherButton.removeClass('selected');
-                }
-
-                // Make the current button if it was not already selected
-                // Otherwise, remove the selected class
+                // If the button is already active, remove the vote
                 if (isAlreadySelected) {
-                    thisButton.removeClass('selected');
-                } else {
-                    thisButton.addClass('selected');
+                    direction = 0;
                 }
-            }).fail(function (data) {
-                // Untoggle the button if the vote failed
-                thisButton.button('toggle');
 
-                alert('An error occurred. Please try again. Details: ' + data.responseText);
-            });
+                // Define the data to send to the server
+                let data = {
+                    direction: direction,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                };
 
+                // Add comment_id if it exists
+                let comment_id = thisButton.data('comment-id');
+                if (comment_id) {
+                    data.comment_id = comment_id;
+                }
+
+                // Send the vote to the server
+                $.post(
+                    "{% url 'vote' debate.slug %}",
+                    data
+                ).done(function (data) {
+                    // Determine which score to update
+                    let score;
+                    if (comment_id) {
+                        score = $('#comment-' + comment_id + '-score');
+                    } else {
+                        score = debateVoteScore;
+                    }
+
+                    // Update the score
+                    score.text(data.score);
+
+                    // Untoggle the other button if it was toggled and unselect it
+                    let otherButton = thisButton.parent().parent().find('.btn').not(thisButton);
+                    let otherButtonIcon = otherButton.find('i');
+                    {# TODO: wth is this? We need to change the implementation so that its more robust #}
+                    if (otherButton.hasClass('selected')) {
+                        otherButton.button('toggle');
+                        // remove the selected class
+                        otherButton.removeClass('selected');
+                        // make the icon not filled
+                        toggleFilledIcon(otherButtonIcon);
+
+
+                    }
+
+                    // Make the current button if it was not already selected
+                    // Otherwise, remove the selected class
+                    let thisButtonIcon = thisButton.find('i');
+                    if (isAlreadySelected) {
+                        thisButton.removeClass('selected');
+                        toggleFilledIcon(thisButtonIcon);
+                    } else {
+                        thisButton.addClass('selected');
+                        toggleFilledIcon(thisButtonIcon);
+                    }
+                }).fail(function (data) {
+                    // Untoggle the button if the vote failed
+                    thisButton.button('toggle');
+
+                    alert('An error occurred. Please try again. Details: ' + data.responseText);
+                });
+            {% endif %}
         });
 
+        function toggleFilledIcon(icon) {
+            if (icon.hasClass('bi-hand-thumbs-down')) {
+                icon.removeClass('bi-hand-thumbs-down');
+                icon.addClass('bi-hand-thumbs-down-fill');
+            } else if (icon.hasClass('bi-hand-thumbs-down-fill')) {
+                icon.removeClass('bi-hand-thumbs-down-fill');
+                icon.addClass('bi-hand-thumbs-down');
+            } else if (icon.hasClass('bi-hand-thumbs-up')) {
+                icon.removeClass('bi-hand-thumbs-up');
+                icon.addClass('bi-hand-thumbs-up-fill');
+            } else if (icon.hasClass('bi-hand-thumbs-up-fill')) {
+                icon.removeClass('bi-hand-thumbs-up-fill');
+                icon.addClass('bi-hand-thumbs-up');
+            }
+        }
+
+        /****************** Autoresize Textarea ******************/
+        const commentTextarea = $('#comment-text');
+        const commentForm = $('#comment-form');
+        const commentSubmitBtn = $('#comment-form button[type="submit"]');
+
+        {% if not request.user.is_authenticated %}
+            commentTextarea.click(function (event) {
+                window.location.href = "{% url 'account_login' %}?next={{ request.get_full_path }}";
+            });
+        {% endif %}
+
+        function autoResizeTextarea() {
+            commentTextarea.css('height', 'auto');
+            commentTextarea.css('height', commentTextarea[0].scrollHeight + 'px');
+        }
+
+        $(document).ready(autoResizeTextarea);
+        $(window).on('resize', autoResizeTextarea);
+        commentTextarea.on('input', function () {
+            // set the size of the textarea to the size of the content
+            autoResizeTextarea();
+
+            if (commentTextarea.val().trim() === '') {
+                commentSubmitBtn.prop('disabled', true);
+                commentSubmitBtn.removeClass('btn-outline-primary');
+                commentSubmitBtn.addClass('btn-outline-secondary');
+            } else {
+                commentSubmitBtn.prop('disabled', false);
+                commentSubmitBtn.removeClass('btn-outline-secondary');
+                commentSubmitBtn.addClass('btn-outline-primary')
+            }
+        });
+        commentTextarea.on('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (commentTextarea.val().trim() !== '') {
+                    commentForm.submit();
+                }
+            }
+        });
+
+        /****************** Debate Text ******************/
+        const debateDescription = $('#debate-description');
+        const showMoreBtn = $('#show-more-btn');
+
+        function isDescriptionOverflowing() {
+            /* For simplicity, just check if the height of the content is greater than 50vh */
+            return debateDescription[0].scrollHeight > 0.5 * window.innerHeight;
+        }
+
+        function evaluateShowMoreBtn() {
+            if (isDescriptionOverflowing()) {
+                debateDescription.addClass('hide-bottom-description');
+                showMoreBtn.show();
+            } else {
+                debateDescription.removeClass('hide-bottom-description');
+                showMoreBtn.hide();
+            }
+        }
+
+        $(document).ready(evaluateShowMoreBtn);
+        $(window).on('resize', evaluateShowMoreBtn);
+
+        showMoreBtn.click(function () {
+            debateDescription.toggleClass('hide-bottom-description');
+            if (debateDescription.hasClass('hide-bottom-description')) {
+                showMoreBtn.html('<i class="bi bi-chevron-down"></i> Show More');
+            } else {
+                showMoreBtn.html('<i class="bi bi-chevron-up"></i> Show Less');
+            }
+        });
 
     </script>
 {% endblock %}

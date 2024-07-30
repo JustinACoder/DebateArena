@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    th, td {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="container my-5">
+        <h1>Invitations</h1>
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Invitation</th>
+                <th scope="col">Debate</th>
+                <th scope="col">Number of Usage</th>
+                <th scope="col">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for invite in invites %}
+                <tr>
+                    <th scope="row">{{ forloop.counter }}</th>
+                    <td>{{ invite.created_at }}</td>
+                    <td>
+                        <a href="{% url 'view_invite' invite.code%}">View Invitation</a>
+                    </td>
+                    <td>
+                        <a href="{% url 'debate' invite.debate.slug %}">{{ invite.debate.title }}</a>
+                    </td>
+                    <td>{{ invite.num_uses }}</td>
+                    <td>
+                        <form action="{% url 'delete_invite' invite.code %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">You don't have any active invitation. To create an invitation, choose a debate and click on the "Create
+                        Invitation" button.
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
