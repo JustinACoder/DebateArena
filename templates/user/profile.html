@@ -2,63 +2,30 @@
 {% load crispy_forms_filters %}
 
 {% block content %}
-    <h1>Profile</h1>
-    <ul class="nav nav-tabs" id="profile-tab" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active" id="stances-tab" data-bs-toggle="tab" data-bs-target="#stances" type="button"
-                    role="tab" aria-controls="stances" aria-selected="true">Stances
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="pending-requests-tab" data-bs-toggle="tab" data-bs-target="#pending-requests"
-                    type="button" role="tab" aria-controls="pending-requests" aria-selected="false">Pending Discussion
-                Requests
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats" type="button"
-                    role="tab" aria-controls="stats" aria-selected="false">Statistics
-            </button>
-        </li>
-    </ul>
-    <div class="tab-content my-2" id="profile-tab-content">
-        <div class="tab-pane fade show active" id="stances" role="tabpanel" aria-labelledby="stances-tab">
-            <h2>Stances</h2>
-            {% if stances %}
-                <ul>
-                    {% for stance in stances %}
-                        <li>You are <strong>{{ stance.stance|yesno:"for,against" }}</strong> in the debate
-                            <a href="{% url 'debate' stance.debate.slug %}"><strong>{{ stance.debate.title }}</strong></a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No stances taken yet</p>
-            {% endif %}
+    <section class="bg-secondary-subtle d-flex flex-column justify-content-center align-items-center py-5">
+        <div id="icon-placeholder" class="rounded-circle bg-secondary" style="aspect-ratio: 1/1; width: 128px"></div>
+        <h1 class="text-center mt-3">{{ profile_user.username }}'s Profile</h1>
+        <p class="text-center text-muted mb-0">Joined on {{ profile_user.date_joined|date:"F j, Y" }}</p>
+        {% if request.user == profile_user %}
+            <a href="{% url 'account_settings' 'profile' %}" class="btn btn-primary mt-4">Edit Profile</a>
+        {% endif %}
+    </section>
+    <section class="py-3">
+        <div class="container-xxl">
+            <div class="row">
+                <div class="col-lg-8 col-xl-9">
+                    <h2>Bio</h2>
+                    <p style="white-space: pre">{{ profile_user.profile.bio|default:"<span class='fst-italic'>No bio yet.</span>" }}</p>
+                    <h2>Public Invitations</h2>
+                    <p>Coming soon...</p>
+                </div>
+                <div class="col-lg-4 col-xl-3">
+                    {% include 'user/components/recent_stances.html' %}
+                </div>
+            </div>
         </div>
-        <div class="tab-pane fade" id="pending-requests" role="tabpanel" aria-labelledby="pending-requests-tab">
-            <h2>Pending Discussion Requests</h2>
-            {% if pending_requests %}
-                <ul>
-                    {% for request in pending_requests %}
-                        <li>Looking for someone <strong>{{ request.stance_wanted|yesno:"for,against" }}</strong>
-                            in
-                            the debate <a
-                                    href="{% url 'debate' request.debate.slug %}"><strong>{{ request.debate.title }}</strong></a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No pending discussion requests</p>
-            {% endif %}
-        </div>
-        <div class="tab-pane fade" id="stats" role="tabpanel" aria-labelledby="stats-tab">
-            <h2>Statistics</h2>
-            <p>Number of Stances: {{ stats.stance_count }}</p>
-            <p>Number of Pending Discussion Requests: {{ stats.pending_request_count }}</p>
-            <p>Number of Discussions: {{ stats.discussion_count }}</p>
-            <p>Number of Messages: {{ stats.message_count }}</p>
-            <p>Number of Comments: {{ stats.comment_count }}</p>
-        </div>
-    </div>
+    </section>
+    <script>
+    
+    </script>
 {% endblock %}
