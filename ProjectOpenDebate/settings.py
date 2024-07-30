@@ -177,6 +177,7 @@ ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 7  # One week
 ACCOUNT_FORMS = {
     'signup': 'users.forms.CustomSignupForm',
     'reset_password_from_key': 'users.forms.CustomResetPasswordKeyForm',
+    'change_password': 'users.forms.CustomChangePasswordForm',
 }
 
 # Email backend settings

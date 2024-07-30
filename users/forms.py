@@ -3,7 +3,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Fieldset, Div, Submit
 from django import forms
 from django.contrib.auth import get_user_model
-from allauth.account.forms import SignupForm, ResetPasswordKeyForm
+from allauth.account.forms import SignupForm, ResetPasswordKeyForm, ChangePasswordForm
 
 from users.models import Profile
 
@@ -33,6 +33,14 @@ class CustomResetPasswordKeyForm(ResetPasswordKeyForm):
     # for the password field.
     def __init__(self, *args, **kwargs):
         super(CustomResetPasswordKeyForm, self).__init__(*args, **kwargs)
+        self.fields['password1'].help_text = None
+
+
+class CustomChangePasswordForm(ChangePasswordForm):
+    # For now, it's exactly the same as the default ChangePasswordForm except that we do not include help_text
+    # for the password field.
+    def __init__(self, *args, **kwargs):
+        super(CustomChangePasswordForm, self).__init__(*args, **kwargs)
         self.fields['password1'].help_text = None
 
 

@@ -6,12 +6,13 @@
     <form method="post">
         {% csrf_token %}
         <div class="my-4">
-            <p class="mb-0"><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
             {% if new_emailaddress %}
+                <p class="mb-0"><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
                 <p><strong>New email:</strong> {{ new_emailaddress.email }}</p>
                 <p>A confirmation email has been sent to {{ new_emailaddress.email }}. You must confirm this address to
                     complete this change.</p>
             {% else %}
+                <p><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
                 <p>Enter your new email address below and we'll send you a confirmation email.</p>
             {% endif %}
         </div>
@@ -25,7 +26,7 @@
             </button>
         {% else %}
             {{ form|crispy }}
-            <button type="submit" name="action_add" class="btn btn-primary">Change Email</button>
+            <button type="submit" name="action_add" class="btn btn-primary rounded-pill p-3 w-100 mt-2">Change Email</button>
         {% endif %}
         <p class="mt-5 mb-0 text-muted text-center small">Go back to <a href="{% url 'account_settings' %}">Account Settings</a></p>
     </form>
