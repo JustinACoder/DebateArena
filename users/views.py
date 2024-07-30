@@ -1,15 +1,38 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Model
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
-from discussion.models import Discussion
-from users.forms import ViewEditUserForm
-from allauth.account.views import EmailView
+from django.views.decorators.http import require_POST
+
+from users.forms import ViewEditUserForm, ProfileForm
 
 
 @login_required
-def account_settings(request):
-    return render(request, 'user/settings.html')
+def account_settings(request, tab='account'):
+    context = {
+        'profile_form': ProfileForm(instance=request.user.profile),
+        'tab': tab,
+    }
+
+    return render(request, 'user/settings.html', context)
+
+
+@login_required
+@require_POST
+def account_profile_edit(request, username):
+    if username != request.user.username:
+        return redirect('account_profile', username)
+
+    profile_form = ProfileForm(request.POST, instance=request.user.profile)
+
+    if profile_form.is_valid():
+        profile_form.save()
+        messages.success(request, 'Profile updated successfully')
+    else:
+        messages.error(request, 'Profile update failed')
+
+    return redirect('account_settings', tab='profile')
 
 
 def account_profile(request, username):
@@ -18,35 +41,19 @@ def account_profile(request, username):
         return redirect('account_login')
 
     # Get the user object for the profile
-    profile_user = get_object_or_404(User, username=username)
+    profile_user = get_object_or_404(User.objects.select_related('profile'), username=username)
 
-    # Get the list of pending discussion requests
-    pending_requests = profile_user.discussionrequest_set.select_related('debate').all()
-
-    # Get the list of stances taken
-    stances = profile_user.stance_set.select_related('debate').all()
-
-    # Get some stats
-    # TODO: transform into a single query
-    # - Number of stance taken
-    # - Number of pending requests
-    # - Number of conversations started
-    # - Number of messages sent
-    # - Number of comments posted
-    stats = {
-        'stance_count': stances.count(),
-        'pending_request_count': pending_requests.count(),
-        'discussion_count': Discussion.objects.filter(
-            Q(participant1=profile_user) | Q(participant2=profile_user)).count(),
-        'message_count': profile_user.message_set.count(),
-        'comment_count': profile_user.comment_set.count(),
-    }
+    # Get recent stances
+    stances = profile_user.stance_set.order_by('-created_at')[:10]
 
     context = {
         'profile_user': profile_user,
-        'pending_requests': pending_requests,
-        'stances': stances,
-        'stats': stats,
+        'recent_stances': stances,
     }
 
     return render(request, 'user/profile.html', context)
+
+
+@login_required
+def account_profile_default(request):
+    return redirect('account_profile', username=request.user.username)

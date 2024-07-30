@@ -1,6 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'account/base_account.html' %}
 
-{% block content %}
-    <h1>Verify Your Email Address</h1>
-    <p>Thanks for signing up! Please check your email and click the link to verify your email address.</p>
+{% block inner_content %}
+    <h1 class="text-center">Verify Your Email Address</h1>
+    <p class="my-4">Thanks for signing up! Please check your email and click the link to verify your email address.</p>
+    <p class="mt-5 mb-0 text-muted text-center small">Go back to <a href="{% url 'account_login' %}">Login</a></p>
 {% endblock %}

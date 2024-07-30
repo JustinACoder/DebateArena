@@ -1,29 +1,34 @@
-{% extends 'base.html' %}
+{% extends 'account/base_account.html' %}
 {% load crispy_forms_filters %}
 
-{% block content %}
-    <h1>Change your Email</h1>
+{% block inner_content %}
+    <h1 class="text-center">Change your Email</h1>
     <form method="post">
         {% csrf_token %}
-        <p><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
+        <div class="my-4">
+            {% if new_emailaddress %}
+                <p class="mb-0"><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
+                <p><strong>New email:</strong> {{ new_emailaddress.email }}</p>
+                <p>A confirmation email has been sent to {{ new_emailaddress.email }}. You must confirm this address to
+                    complete this change.</p>
+            {% else %}
+                <p><strong>Current email:</strong> {{ current_emailaddress.email }}</p>
+                <p>Enter your new email address below and we'll send you a confirmation email.</p>
+            {% endif %}
+        </div>
         {% if new_emailaddress %}
-            <p><strong>New email:</strong> {{ new_emailaddress.email }}</p>
-            <p>
-                A confirmation email has been sent to {{ new_emailaddress.email }}. You must confirm this address to
-                complete this change.
-                <br>
-                <button form="pending-email" name="action_send" type="submit" class="btn btn-primary">Resend
-                    Confirmation Email
-                </button>
-                <button form="pending-email" name="action_remove" type="submit"
-                        class="btn btn-danger">Cancel Email Change
-                </button>
-            </p>
+            <button form="pending-email" name="action_send" type="submit"
+                    class="btn btn-primary rounded-pill p-3 mt-2 w-100">Resend
+                Confirmation Email
+            </button>
+            <button form="pending-email" name="action_remove" type="submit"
+                    class="btn btn-outline-danger rounded-pill p-3 mt-2 w-100">Cancel Email Change
+            </button>
         {% else %}
-            <p>Enter your new email address below and we'll send you a confirmation email.</p>
             {{ form|crispy }}
-            <button type="submit" name="action_add" class="btn btn-primary">Change Email</button>
+            <button type="submit" name="action_add" class="btn btn-primary rounded-pill p-3 w-100 mt-2">Change Email</button>
         {% endif %}
+        <p class="mt-5 mb-0 text-muted text-center small">Go back to <a href="{% url 'account_settings' %}">Account Settings</a></p>
     </form>
     {% if new_emailaddress %}
         <form style="display: none"
