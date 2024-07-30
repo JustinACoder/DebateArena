@@ -7,7 +7,7 @@
         <h1 class="text-center mt-3">{{ profile_user.username }}'s Profile</h1>
         <p class="text-center text-muted mb-0">Joined on {{ profile_user.date_joined|date:"F j, Y" }}</p>
         {% if request.user == profile_user %}
-            <a href="{% url 'account_settings' %}" class="btn btn-primary mt-4">Edit Profile</a>
+            <a href="{% url 'account_settings' 'profile' %}" class="btn btn-primary mt-4">Edit Profile</a>
         {% endif %}
     </section>
     <section class="py-3">
