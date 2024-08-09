@@ -12,10 +12,6 @@
             -webkit-background-clip: text;
             background-clip: text;
         }
-
-        .hero-title {
-            font-size: calc(1vw + 2vh + 1vmin);
-        }
     </style>
 {% endblock %}
 
@@ -23,16 +19,16 @@
     <div class="container" style="height: 75vh">
         <div class="row h-100 justify-content-center">
             <div class="col-lg align-content-center text-center text-lg-start">
-                <h1 class="text-black hero-title fw-bold">Challenge your Ideas by Debating on <span
+                <h1 class="text-black fw-bold">Challenge your Ideas by Debating on <span
                         id="rolling-debate">Gun Control</span>
                 </h1>
                 <p class="text-secondary fs-4">Via Live One-on-One Chat</p>
                 <div class="row justify-content-center justify-content-lg-start">
                     <div class="col col-auto my-1">
-                        <a class="btn btn-lg btn-primary" href="{% url 'debate_explore' %}">Explore Debates</a>
+                        <a class="btn btn-md-lg btn-primary" href="{% url 'debate_explore' %}">Explore Debates</a>
                     </div>
                     <div class="col col-auto my-1 align-content-center">
-                        <a class="text-secondary fs-5" href="#how-it-works">Learn More</a>
+                        <a class="text-secondary text-decoration-none fs-6 fs-md-5" href="#how-it-works">Learn More</a>
                     </div>
                 </div>
             </div>
@@ -153,7 +149,7 @@
             <p class="text-center">Join DebateArena today and start challenging your ideas through live one-on-one
                 debates!</p>
             <div class="text-center">
-                <a class="btn btn-lg btn-primary" href="{% url 'account_signup' %}">Get Started</a>
+                <a class="btn btn-md-lg btn-primary" href="{% url 'account_signup' %}">Get Started</a>
             </div>
         </div>
     </section>

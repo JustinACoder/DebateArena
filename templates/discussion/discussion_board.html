@@ -121,35 +121,10 @@
 
 
         /* WebSocket chat */
-        {# TODO: put reusable sections into a file that we can include #}
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         let currentMessagePage = 1;
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
-        ws.onmessage = function (event) {
-            let wsMessage = JSON.parse(event.data);
-
-            let payload = wsMessage['payload'];
-
-            // Check if there was an error
-            if (payload['status'] === 'error') {
-                alert(`Error (${payload['event_type']}): ${payload['message']}`);
-                return;
-            }
-
-            // Give the message to the appropriate handler
-            let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
-            switch (handler_key) {
-                case 'message.new_message':
-                    handle_new_message(payload['data']);
-                    break;
-                case 'discussion.new_discussion':
-                    handle_new_discussion(payload['data']);
-                    break;
-                default:
-                    alert(`This event type is not handled: ${handler_key}`);
-            }
-        }
+        websocketManager.add_handler('message.new_message', handle_new_message);
+        websocketManager.add_handler('discussion.new_discussion', handle_new_discussion);
 
         function encodehtml(s) {
             return $('<textarea />').text(s).html();

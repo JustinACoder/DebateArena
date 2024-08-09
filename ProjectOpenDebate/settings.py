@@ -62,7 +62,8 @@ INSTALLED_APPS = [
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     "discussion.apps.DiscussionConfig",
-    "debateme.apps.DebatemeConfig"
+    "debateme.apps.DebatemeConfig",
+    "notifications.apps.NotificationsConfig"
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
