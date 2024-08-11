@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     #'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'voting',
+    'django_htmx',
     'crispy_forms',
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
@@ -82,6 +83,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'

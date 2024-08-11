@@ -1,4 +1,5 @@
 {% load static %}
+{% load django_htmx %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,6 +22,8 @@
     <!-- TODO: figure out the bestway to include these libraries (ex: end of body? CDN? etc...) -->
     <script src="{% static 'libraries/jquery-3.7.1.min.js' %}"></script>
     <script src="{% static 'libraries/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'libraries/htmx.min.js' %}"></script>
+    {% django_htmx_script %}
     <script src="{% static 'libraries/da-toast.min.js' %}"></script>
     {% if user.is_authenticated %}
         <script src="{% static 'js/websocket.js' %}"></script>
