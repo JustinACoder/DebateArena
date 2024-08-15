@@ -32,8 +32,7 @@
     <style>
         :root {
             --bs-font-sans-serif: 'Montserrat', sans-serif;
-            {#--bs-dropdown-link-hover-bg: rgba(0, 0, 0, 0.1); // TODO: modify bootstrap sass file for this? this impacts the bg color of hover of dropdown items #}
-            --nav-height: 56px;
+        {#--bs-dropdown-link-hover-bg: rgba(0, 0, 0, 0.1); // TODO: modify bootstrap sass file for this? this impacts the bg color of hover of dropdown items #} --nav-height: 56px;
         }
 
         section {
@@ -101,8 +100,9 @@
             display: list-item;
         }
 
-        *:hover > .go-to-link {
-            content: "<i class='bi bi-arrow-right'></i>";
+        .nav-item-icon:has(.nav-icon.show) {
+            background: var(--bs-primary-bg-subtle);
+            color: var(--bs-primary);
         }
     </style>
 
@@ -139,8 +139,11 @@
         <!-- Right Side -->
         <div class="order-sm-0 hstack column-gap-2 order-1 order-sm-2">
             {% if user.is_authenticated %}
-                <div class="dropdown nav-item-icon">
-                    <a class="nav-icon fs-4" href="#" role="button" id="notification-dropdown"
+                <div class="dropdown nav-item-icon dropdown-redirect-below-md">
+                    <a class="nav-icon fs-4"
+                       href="{% url 'list_notifications' %}" role="button"
+                       data-is-current="{% if request.resolver_match.url_name == 'list_notifications' %}true{% else %}false{% endif %}"
+                       id="notification-dropdown"
                        data-bs-toggle="dropdown"
                        data-bs-auto-close="outside"
                        aria-expanded="false">
@@ -258,12 +261,14 @@
         websocketManager.add_handler('notification.new_notification', handleNewNotification);
 
         $(document).ready(function () {
-            $('#notification-dropdown').on('click', function (event) {
-                if (window.innerWidth < 768) {
-                    event.preventDefault();
-                    window.location.href = "{% url 'list_notifications' %}";
-                }
-            });
+            if (window.innerWidth < 768) {
+                $('.dropdown-redirect-below-md').on('show.bs.dropdown', function () {
+                    window.location.href = $(this).find('a.nav-icon').attr('href');
+                    return false;
+                });
+            }
+            
+            $('.nav-icon[data-is-current="true"]').addClass('show').removeAttr('data-bs-toggle data-bs-auto-close');
         });
     </script>
 {% endif %}
