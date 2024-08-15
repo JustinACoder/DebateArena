@@ -7,7 +7,7 @@ class WebSocketManager {
     connect() {
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         this.socket = new WebSocket(`${protocol}://${window.location.host}/ws/`);
-        this.socket.onmessage = this.on_message;
+        this.socket.onmessage = this.on_message.bind(this);
     }
 
     add_handler(stream, event_type, handler) {
@@ -28,12 +28,25 @@ class WebSocketManager {
 
         // Give the message to the appropriate handler
         let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
-        let handler = this.handlers[handler_key];
-        if (handler !== undefined) {
+        if (handler_key in this.handlers) {
+            let handler = this.handlers[handler_key];
             handler(payload['data']);
         }else {
-            console.log(`No handler for ${handler_key}`);
+            console.log(`No handler for ${handler_key}, the available handlers are: ${Object.keys(this.handlers)}`);
         }
+    }
+
+    send_chat_message(discussionId, message) {
+        this.socket.send(JSON.stringify({
+            'stream': 'message',
+            'payload': {
+                'event_type': 'new_message',
+                'data': {
+                    'message': message,
+                    'discussion_id': discussionId
+                }
+            }
+        }));
     }
 }
 

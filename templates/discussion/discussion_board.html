@@ -123,8 +123,8 @@
         /* WebSocket chat */
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         let currentMessagePage = 1;
-        websocketManager.add_handler('message.new_message', handle_new_message);
-        websocketManager.add_handler('discussion.new_discussion', handle_new_discussion);
+        websocketManager.add_handler('message', 'new_message', handle_new_message);
+        websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
 
         function encodehtml(s) {
             return $('<textarea />').text(s).html();
@@ -190,17 +190,7 @@
                 return;
             }
 
-            let data = {
-                'stream': 'message',
-                'payload': {
-                    'event_type': 'new_message',
-                    'data': {
-                        'message': message,
-                        'discussion_id': currentDiscussionId
-                    },
-                }
-            };
-            ws.send(JSON.stringify(data));
+            websocketManager.send_chat_message(currentDiscussionId, message);
 
             messageInput[0].value = '';
 

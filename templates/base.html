@@ -258,7 +258,7 @@
             $.toast('info', data.message);
         }
 
-        websocketManager.add_handler('notification.new_notification', handleNewNotification);
+        websocketManager.add_handler('notification', 'new_notification', handleNewNotification);
 
         $(document).ready(function () {
             if (window.innerWidth < 768) {
