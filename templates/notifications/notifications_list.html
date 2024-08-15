@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    <style>
+        #notifications-spinner {
+            display: none;
+        }
+        
+        .htmx-request #notifications-spinner {
+            display: block;
+        }
+        
+        .htmx-request#notifications-spinner {
+            display: block;
+        }
+        
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container py-4">
+        <h1 class="px-3">Notifications</h1>
+        <div>
+            <ul class="list-unstyled list-group"
+                hx-get="{% url 'get_notifications_page' %}"
+                hx-trigger="load"
+                hx-swap="afterbegin"
+                hx-indicator="#notifications-spinner">
+            </ul>
+            <div class="text-center my-2" id="notifications-spinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

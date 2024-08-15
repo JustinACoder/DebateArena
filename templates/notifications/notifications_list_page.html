@@ -1,0 +1,39 @@
+{% for notification in page %}
+    {% if forloop.last and page.has_next and not is_dropdown %}
+        <li class="my-2"
+            hx-trigger="intersect once"
+            hx-get="{% url 'get_notifications_page' %}?page={{ page.next_page_number }}"
+            hx-swap="afterend">
+            {% else %}
+        <li class="my-2">
+    {% endif %}
+<div class="px-3 list-group-item list-group-item-action border-0 shadow-sm position-relative py-2 rounded-3 text-break"
+     style="white-space: normal;">
+    <h6 class="fw-bold">{{ notification.title }}</h6>
+    <p class="mb-0">{{ notification.message }}</p>
+    <span class="text-muted small">{{ notification.endnote }}</span>
+    <a href="{{ notification.redirect_url }}" class="stretched-link"></a>
+</div>
+</li>
+{% empty %}
+    {# If its empty, its the first page #}
+    <li class="my-2">
+        <div class="py-2 text-center text-muted">No notifications yet</div>
+    </li>
+{% endfor %}
+
+{# If there were notifications, but there are no more #}
+{% if not page.has_next and page %}
+    <li class="my-2">
+        <div class="py-2 text-center text-muted">No more notifications</div>
+    </li>
+{% endif %}
+
+{# If we are in dropdown, add see more at the end #}
+{% if is_dropdown %}
+    <li class="my-2">
+        <div class="py-2 text-center">
+            <a href="{% url 'list_notifications' %}" class="text-decoration-none">See all notifications</a>
+        </div>
+    </li>
+{% endif %}

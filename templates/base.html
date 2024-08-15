@@ -32,6 +32,7 @@
     <style>
         :root {
             --bs-font-sans-serif: 'Montserrat', sans-serif;
+            {#--bs-dropdown-link-hover-bg: rgba(0, 0, 0, 0.1); // TODO: modify bootstrap sass file for this? this impacts the bg color of hover of dropdown items #}
             --nav-height: 56px;
         }
 
@@ -87,6 +88,22 @@
         .nav-item-icon:hover {
             background: darkgray;
         }
+
+        #notification-spinner-dropdown {
+            display: none;
+        }
+
+        .htmx-request #notification-spinner-dropdown {
+            display: list-item;
+        }
+
+        .htmx-request#notification-spinner-dropdown {
+            display: list-item;
+        }
+
+        *:hover > .go-to-link {
+            content: "<i class='bi bi-arrow-right'></i>";
+        }
     </style>
 
     {% block head %}
@@ -125,28 +142,25 @@
                 <div class="dropdown nav-item-icon">
                     <a class="nav-icon fs-4" href="#" role="button" id="notification-dropdown"
                        data-bs-toggle="dropdown"
+                       data-bs-auto-close="outside"
                        aria-expanded="false">
                         <i class="bi bi-bell-fill"></i>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notification-dropdown">
-                        <li><h6 class="dropdown-header">Notifications</h6></li>
-                        <li><div class="dropdown-item">This is a notification</div></li>
-                        <li>
-                            <div class="text-center my-2">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
+                    {% include 'notifications/notifications_list_dropdown.html' %}
                 </div>
                 <div class="dropdown nav-item-icon">
                     <a class="nav-icon" href="#" role="button" id="account-dropdown" data-bs-toggle="dropdown"
-                       aria-expanded="false">
+                       aria-expanded="false"
+                       data-bs-auto-close="outside">
                         <i class="bi bi-person-circle"></i>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="account-dropdown">
-                        <li><h6 class="dropdown-header">{{ user.username }}</h6></li>
+                    <ul class="dropdown-menu dropdown-menu-end bg-light" style="width: min(300px, 100vw)"
+                        aria-labelledby="account-dropdown">
+                        <li><p class="dropdown-item-text mb-0">Logged in as <strong>{{ user.username }}</strong></p>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li><a class="dropdown-item"
                                href="{% url 'account_profile' request.user.username %}">Profile</a></li>
                         <li><a class="dropdown-item" href="{% url 'discussion_default' %}">Discussions</a></li>
@@ -242,6 +256,15 @@
         }
 
         websocketManager.add_handler('notification.new_notification', handleNewNotification);
+
+        $(document).ready(function () {
+            $('#notification-dropdown').on('click', function (event) {
+                if (window.innerWidth < 768) {
+                    event.preventDefault();
+                    window.location.href = "{% url 'list_notifications' %}";
+                }
+            });
+        });
     </script>
 {% endif %}
 {% if messages %}
