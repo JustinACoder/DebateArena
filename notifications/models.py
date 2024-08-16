@@ -102,8 +102,11 @@ class Notification(models.Model):
 @receiver(post_save, sender=Notification)
 def send_notification(sender, instance, created, **kwargs):
     """
-    Send the notification (or updates) to the user using the WebSocket.
+    Send the notification to the user using the WebSocket.
     """
+    if not created:
+        return
+
     # Get current channel layer
     channel_layer = get_channel_layer()
 
@@ -118,7 +121,7 @@ def send_notification(sender, instance, created, **kwargs):
         user_group_name,
         {
             'status': 'success',
-            'event_type': 'new_notification' if created else 'update_notification',
+            'event_type': 'new_notification',
             'type': 'send.json',
             'data': {
                 'notification_id': instance.id,

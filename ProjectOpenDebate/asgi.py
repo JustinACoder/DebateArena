@@ -14,6 +14,7 @@ from channels.auth import AuthMiddlewareStack
 from django.urls import re_path
 
 from discussion.consumers import MessageConsumer, DiscussionConsumer
+from notifications.consumers import NotificationConsumer
 from .demultiplexer import AsyncJsonWebsocketDemultiplexer
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ProjectOpenDebate.settings')
@@ -25,6 +26,7 @@ application = ProtocolTypeRouter({
             re_path("^ws/$", AsyncJsonWebsocketDemultiplexer.as_asgi(
                 message=MessageConsumer.as_asgi(),
                 discussion=DiscussionConsumer.as_asgi(),
+                notification=NotificationConsumer.as_asgi(),
             ))
         ])
     ),

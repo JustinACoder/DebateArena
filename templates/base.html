@@ -106,6 +106,19 @@
             background: var(--bs-primary-bg-subtle);
             color: var(--bs-primary);
         }
+
+        {# TODO: this next notification read section isnt robust to change, is there a better way? #}
+        .notification.unread > .list-group-item {
+            border-left: 5px solid var(--bs-primary) !important;
+        }
+
+        .notification.unread h6 {
+            font-weight: bold;
+        }
+
+        .notification.unread .timeago {
+            color: var(--bs-primary) !important;
+        }
     </style>
 
     {% block head %}
@@ -256,22 +269,56 @@
 {% endif %}
 {% if user.is_authenticated %}
     <script>
+        const notificationList = $('#notification-list');
+        const notificationDropdown = $('#notification-list-dropdown');
+        const notificationDropdownHeader = $('#notification-header-dropdown');
+
         function handleNewNotification(data) {
-            $.toast('info', data.message);
+            let element = $(`<li class="my-2">${data.html}</li>`);
+            {% if request.resolver_match.url_name == 'list_notifications' %}
+                {# If we are on the notifications page, we need to prepend the new notification #}
+                element.hide().prependTo(notificationList).slideDown();
+            {% else %}
+                {# If we are not on the notifications page, we need to update the dropdown #}
+                {# If the dropdown was never opened before, we have nothing to do since it will be updated when opened #}
+                {# If the number of children li is greater than 1, then it has been opened before #}
+                {# This because the header is always present (so 1) but any other notification or notice will make the count greater than 1 #}
+                if (notificationDropdown.children('li').not(notificationDropdownHeader).length > 0) {
+                    element.hide().insertAfter(notificationDropdownHeader).slideDown();
+                }
+            {% endif %}
+        }
+
+        function handleSetRead(data) {
+            let notificationId = data.notification_id;
+            let isUnread = !data.is_read;
+            let notification = $('.notification a[data-notification-id="'+notificationId+'"]').closest('.notification');
+            notification.toggleClass('unread', isUnread);
+        }
+
+        function clickedNotification(element) {
+            {# We have to put this here and not a normal jquery listener bc notifications are loaded after the page #}
+            // if the notification is not read, set it to read
+            if ($(element).closest('.notification').hasClass('unread')) {
+                websocketManager.set_notification_read($(element).data('notification-id'), true);
+            }
         }
 
         websocketManager.add_handler('notification', 'new_notification', handleNewNotification);
+        websocketManager.add_handler('notification', 'set_read', handleSetRead);
 
         $(document).ready(function () {
+            // Redirect to the notifications page if the page is too small for the dropdown
             if (window.innerWidth < 768) {
                 $('.dropdown-redirect-below-md').on('show.bs.dropdown', function () {
                     window.location.href = $(this).find('a.nav-icon').attr('href');
                     return false;
                 });
             }
-            
+
+            // Make the notification icon active if we are on the notifications page
             $('.nav-icon[data-is-current="true"]').addClass('show').removeAttr('data-bs-toggle data-bs-auto-close');
-            
+
             // initialize timeago
             $.timeago.settings.strings = {
                 prefixAgo: null,

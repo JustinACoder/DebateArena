@@ -48,6 +48,19 @@ class WebSocketManager {
             }
         }));
     }
+
+    set_notification_read(notificationId, is_read) {
+        this.socket.send(JSON.stringify({
+            'stream': 'notification',
+            'payload': {
+                'event_type': 'set_read',
+                'data': {
+                    'notification_id': notificationId,
+                    'is_read': is_read
+                }
+            }
+        }));
+    }
 }
 
 websocketManager = new WebSocketManager();

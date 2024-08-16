@@ -22,6 +22,7 @@
         <h1 class="px-3">Notifications</h1>
         <div>
             <ul class="list-unstyled list-group"
+                id="notification-list"
                 hx-get="{% url 'get_notifications_page' %}"
                 hx-trigger="load"
                 hx-swap="afterbegin"

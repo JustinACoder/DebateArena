@@ -2,8 +2,10 @@
      aria-labelledby="notification-dropdown"
      style="width: min(500px, 100vh); height: min(700px, 100vh);"
      hx-indicator="#notification-spinner-dropdown">
-    <ul class="overflow-y-auto list-unstyled list-group h-100 px-2">
+    <ul class="overflow-y-auto list-unstyled list-group h-100 px-2"
+        id="notification-list-dropdown">
         <li class="my-2"
+            id="notification-header-dropdown"
             hx-trigger="intersect once"
             hx-get="{% url 'get_notifications_page' %}?dropdown=true"
             hx-swap="afterend">
