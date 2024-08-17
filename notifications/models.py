@@ -54,6 +54,18 @@ class NotificationManager(models.Manager):
             url_args={'discussion_id': message.discussion.id}
         )
 
+    def create_accepted_invite_notification(self, invite, invite_use, accepting_user):
+        return self.create(
+            user=invite.creator,
+            notification_type=NotificationType.objects.get(name='accepted_invite'),
+            data={
+                'debate_title': invite.debate.title,
+                'participant_username': accepting_user.username,
+            },
+            url_name='specific_discussion',
+            url_args={'discussion_id': invite_use.resulting_discussion.id}
+        )
+
 
 class Notification(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)

@@ -11,6 +11,7 @@ from voting.models import Vote
 
 from discussion.models import DiscussionRequest, Discussion
 from discussion.views import specific_discussion
+from notifications.models import Notification
 from .forms import CommentForm
 from .models import Debate, Comment, Stance
 import logging
@@ -208,8 +209,11 @@ def request_discussion(request, debate_slug):
             participant2=participant2
         )
 
-        # Notify the participants about the new discussion
-        discussion_instance.notify_participants()
+        # If any of the participants is online, we will add the discussion to their list of discussions live
+        discussion_instance.add_discussion_to_participants_list_live()
+
+        # Create a notification for the waiting participant (e.g. participant1)
+        Notification.objects.create_new_discussion_notification(participant1, discussion_instance)
 
         messages.success(request, 'Debate started successfully.')
 

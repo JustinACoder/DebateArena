@@ -13,7 +13,7 @@ class Discussion(models.Model):
     participant2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='p2_discussion_set')
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def notify_participants(self):
+    def add_discussion_to_participants_list_live(self):
         # Get current channel layer
         channel_layer = get_channel_layer()
 
