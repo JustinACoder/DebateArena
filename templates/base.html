@@ -325,6 +325,7 @@
         }
 
         function clickedNotification(event) {
+            {# TODO: find a way to prevent the read marker from disappearing just before redirecting #}
             event.preventDefault();
             
             {# We have to put this here and not a normal jquery listener bc notifications are loaded after the page #}
