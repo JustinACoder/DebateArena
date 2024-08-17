@@ -1,5 +1,6 @@
 {% for notification in page %}
     <li class="my-2 notification {% if not notification.read %}unread{% endif %}"
+        data-notification-id="{{ notification.id }}"
             {% if forloop.last %}
         hx-on::load="$('time.timeago').timeago();"
                 {% if page.has_next and not is_dropdown %}

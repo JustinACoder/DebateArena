@@ -119,6 +119,15 @@
         .notification.unread .timeago {
             color: var(--bs-primary) !important;
         }
+
+        .notification .stretched-link::after {
+            z-index: auto !important;
+        }
+
+        .notification:not(:hover) .dropdown:not(:has(:first-child.show)) {
+            display: none;
+        }
+
     </style>
 
     {% block head %}
@@ -267,8 +276,13 @@
         <div class="text-center p-3">© DebateArena 2024</div>
     </footer>
 {% endif %}
-{% if user.is_authenticated %}
-    <script>
+<script>
+    document.body.addEventListener('htmx:beforeSwap', function (evt) {
+        if (evt.detail.xhr.status === 204) {
+            evt.detail.shouldSwap = true;
+        }
+    });
+    {% if user.is_authenticated %}
         const notificationList = $('#notification-list');
         const notificationDropdown = $('#notification-list-dropdown');
         const notificationDropdownHeader = $('#notification-header-dropdown');
@@ -292,15 +306,27 @@
         function handleSetRead(data) {
             let notificationId = data.notification_id;
             let isUnread = !data.is_read;
-            let notification = $('.notification a[data-notification-id="'+notificationId+'"]').closest('.notification');
+            let notification = $('.notification[data-notification-id="' + notificationId + '"]');
             notification.toggleClass('unread', isUnread);
+        }
+
+        function toggleNotificationRead(element, value = null, fromDropdown = false) {
+            let notification = $(element).closest('.notification');
+            let notificationId = notification.data('notification-id');
+            let readValue = value ?? notification.hasClass('unread');
+            websocketManager.set_notification_read(notificationId, readValue);
+
+            if (fromDropdown) {
+                $(element).text(readValue ? 'Mark as unread' : 'Mark as read')
+            }
         }
 
         function clickedNotification(element) {
             {# We have to put this here and not a normal jquery listener bc notifications are loaded after the page #}
             // if the notification is not read, set it to read
-            if ($(element).closest('.notification').hasClass('unread')) {
-                websocketManager.set_notification_read($(element).data('notification-id'), true);
+            let notification = $(element).closest('.notification');
+            if (notification.hasClass('unread')) {
+                toggleNotificationRead(notification, true);
             }
         }
 
@@ -341,17 +367,16 @@
             };
             $("time.timeago").timeago();
         });
-    </script>
-{% endif %}
-{% if messages %}
-    <script>
+    {% endif %}
+
+    {% if messages %}
         {% for message in messages %}
             {# The goal of escapejs is not to prevent code execution, but to prevent syntax errors when #}
             {# the message contains characters that would break the JavaScript code. #}
             {# However, we want to be able to have any html tags/script inside the content here #}
             $.toast('{{ message.tags }}', '{{ message | escapejs}}');
         {% endfor %}
-    </script>
-{% endif %}
+    {% endif %}
+</script>
 </body>
 </html>
