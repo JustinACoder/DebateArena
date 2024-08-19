@@ -291,9 +291,20 @@
     });
     {% if user.is_authenticated %}
         const notificationList = $('#notification-list');
-
+        const notificationBadge = $('#notification-badge');
+        let numberUnread = {{ request.user.num_unread_notifications }};
+        
+        function updateNumberUnread(increment) {
+            numberUnread += increment;
+            if (numberUnread === 0) {
+                notificationBadge.addClass('d-none');
+            }else {
+                notificationBadge.removeClass('d-none');
+            }
+        }
+        
         function handleNewNotification(data) {
-            let element = $(`<li class="my-2">${data.html}</li>`);
+            let element = $(`<li class="my-2 notification unread">${data.html}</li>`);
             {# If we are not on the notifications page, we need to update the dropdown #}
             {# If the dropdown was never opened before, we have nothing to do since it will be updated when opened #}
             {# If the number of children li is greater than 0, then it has been opened before #}
@@ -302,6 +313,15 @@
             if (notificationList.children('li').length > 0) {
                 element.hide().prependTo(notificationList).slideDown();
             }
+            
+            // Make sure the notification badge is visible
+            notificationBadge.removeClass('d-none');
+            
+            // Update the number of unread notifications
+            updateNumberUnread(1);
+            
+            // initialize timeago
+            element.find('time.timeago').timeago();
         }
 
         function handleSetRead(data) {
@@ -309,6 +329,9 @@
             let isUnread = !data.is_read;
             let notification = $('.notification[data-notification-id="' + notificationId + '"]');
             notification.toggleClass('unread', isUnread);
+            
+            // Update the number of unread notifications
+            updateNumberUnread(isUnread ? 1 : -1);
         }
 
         function toggleNotificationRead(element, value = null, fromDropdown = false) {

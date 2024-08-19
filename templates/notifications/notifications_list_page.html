@@ -1,13 +1,10 @@
 {% for notification in page %}
     <li class="my-2 notification {% if not notification.read %}unread{% endif %}"
         data-notification-id="{{ notification.id }}"
-            {% if forloop.last %}
-        hx-on::load="$('time.timeago').timeago();"
-                {% if page.has_next and not is_dropdown %}
+            {% if forloop.last and page.has_next and not is_dropdown %}
         hx-trigger="intersect once"
         hx-get="{% url 'get_notifications_page' %}?page={{ page.next_page_number }}&unread_only={{ unread_only }}"
         hx-swap="afterend"
-                {% endif %}
             {% endif %}>
         {% include 'notifications/notification.html' with notification=notification %}
     </li>

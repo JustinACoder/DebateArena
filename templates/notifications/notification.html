@@ -1,19 +1,20 @@
 {% load tz %}
 
 <div class="px-3 list-group-item list-group-item-action border-0 shadow-sm position-relative py-2 rounded-3 text-break hstack gap-2 justify-content-between"
-     style="white-space: normal;">
+     style="white-space: normal; z-index: auto;">
     <div>
-        <div class=" hstack mb-2 gap-3">
+        <div class="hstack mb-2 gap-3">
             <h6 class="mb-0">{{ notification.title }}</h6>
             {# TODO: determine the timezone based on the user/device #}
             <time class="timeago text-muted small"
+                  hx-on::load="$(this).timeago();"
                   datetime="{{ notification.created_at|timezone:"America/Montreal"|date:"c" }}"></time>
         </div>
         <p class="mb-0">{{ notification.message }}</p>
         <span class="text-muted small">{{ notification.endnote }}</span>
         <a href="{{ notification.redirect_url }}" class="stretched-link"></a>
     </div>
-    <div class="dropdown z-2">
+    <div class="dropdown">
         <a href="javascript:void(0)" role="button" class="fs-4 d-grid bg-secondary-subtle lh-1 rounded-circle"
            style="height: 40px; aspect-ratio: 1/1; place-items: center;"
            data-bs-toggle="dropdown" aria-expanded="false">
