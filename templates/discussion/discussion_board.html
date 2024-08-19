@@ -4,8 +4,6 @@
 {% load tz %} {# used to force America/Montreal timezone, this should adapt to the user/device #}
 
 {% block head %}
-    <script src="{% static 'libraries/jquery.timeago.min.js' %}" type="text/javascript"></script>
-
     <style>
         #main-content {
             overflow-y: auto;
@@ -121,35 +119,10 @@
 
 
         /* WebSocket chat */
-        {# TODO: put reusable sections into a file that we can include #}
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         let currentMessagePage = 1;
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
-        ws.onmessage = function (event) {
-            let wsMessage = JSON.parse(event.data);
-
-            let payload = wsMessage['payload'];
-
-            // Check if there was an error
-            if (payload['status'] === 'error') {
-                alert(`Error (${payload['event_type']}): ${payload['message']}`);
-                return;
-            }
-
-            // Give the message to the appropriate handler
-            let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
-            switch (handler_key) {
-                case 'message.new_message':
-                    handle_new_message(payload['data']);
-                    break;
-                case 'discussion.new_discussion':
-                    handle_new_discussion(payload['data']);
-                    break;
-                default:
-                    alert(`This event type is not handled: ${handler_key}`);
-            }
-        }
+        websocketManager.add_handler('message', 'new_message', handle_new_message);
+        websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
 
         function encodehtml(s) {
             return $('<textarea />').text(s).html();
@@ -215,17 +188,7 @@
                 return;
             }
 
-            let data = {
-                'stream': 'message',
-                'payload': {
-                    'event_type': 'new_message',
-                    'data': {
-                        'message': message,
-                        'discussion_id': currentDiscussionId
-                    },
-                }
-            };
-            ws.send(JSON.stringify(data));
+            websocketManager.send_chat_message(currentDiscussionId, message);
 
             messageInput[0].value = '';
 
@@ -351,29 +314,6 @@
                 // Once the page is loaded, simulate a click on the first chat
                 $('#discussion-{{ discussion_id }}').click();
             {% endif %}
-
-            // initialize timeago
-            jQuery.timeago.settings.strings = {
-                prefixAgo: null,
-                prefixFromNow: null,
-                suffixAgo: "",
-                suffixFromNow: "",
-                seconds: "Now",
-                minute: "1m",
-                minutes: "%dm",
-                hour: "1h",
-                hours: "%dh",
-                day: "1d",
-                days: "%dd",
-                month: "1mo",
-                months: "%dmo",
-                year: "1yr",
-                years: "%dyr",
-                wordSeparator: " ",
-                numbers: []
-            };
-            $("time.timeago").timeago();
-
         });
     </script>
 {% endblock %}

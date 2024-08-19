@@ -54,15 +54,17 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    #'allauth.socialaccount.providers.google',
+    # 'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'voting',
+    'django_htmx',
     'crispy_forms',
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
     "discussion.apps.DiscussionConfig",
-    "debateme.apps.DebatemeConfig"
+    "debateme.apps.DebatemeConfig",
+    "notifications.apps.NotificationsConfig"
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -81,6 +83,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
+    'notifications.middleware.NotificationMiddleware',
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
@@ -190,7 +194,6 @@ ENDLESS_PAGINATION_SETTINGS = {
     'FIRST_PAGE_SIZE': 50,  # The size of the first page of a paginated list
     'PAGE_SIZE': 30,  # The size of the rest of the pages
 }
-
 
 # Admins
 ADMINS = [

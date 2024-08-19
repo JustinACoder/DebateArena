@@ -11,19 +11,6 @@ class MessageConsumer(CustomBaseConsumer):
     This consumer handles the WebSocket connection for the sending and receiving of messages in discussions.
     """
 
-    @database_sync_to_async
-    def save_message_to_db(self, user, discussion_id: int, message_text: str):
-        messageForm = MessageForm({'text': message_text})
-
-        if messageForm.is_valid():
-            message = messageForm.save(commit=False)
-            message.discussion_id = discussion_id
-            message.author = user
-            message.save()
-            return True
-        else:
-            return False
-
     async def receive_json(self, content, **kwargs):
         """
         Receives a JSON message from the client and processes it.
@@ -47,10 +34,7 @@ class MessageConsumer(CustomBaseConsumer):
 
         # check that the user is a participant in the discussion
         try:
-            discussion = await database_sync_to_async(Discussion.objects.get)(
-                Q(participant1=user) | Q(participant2=user),
-                id=discussion_id
-            )
+            discussion = await Discussion.objects.aget(Q(participant1=user) | Q(participant2=user), id=discussion_id)
         except Discussion.DoesNotExist:
             await self.send_json({'status': 'error', 'message': 'You are not a participant in this discussion'})
             return
@@ -68,11 +52,13 @@ class MessageConsumer(CustomBaseConsumer):
             await self.send_json({'status': 'error', 'message': 'Missing message'})
             return
 
-        # save the message to the database
-        is_valid_message = await self.save_message_to_db(user, discussion.id, message)
-
-        # Send error message if the message is invalid
-        if not is_valid_message:
+        # Save the message to the database
+        messageForm = MessageForm({'text': message})
+        if messageForm.is_valid():
+            message.instance.discussion_id = discussion.id
+            message.instance.author = user
+            await message.asave()
+        else:
             await self.send_json({'status': 'error', 'message': 'Invalid message'})
             return
 

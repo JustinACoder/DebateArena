@@ -7,4 +7,5 @@ django-environ~=0.11.2
 django-extensions~=3.2.3
 django-allauth~=0.63.2
 django-voting~=1.1.0
+django-htmx~=1.19.0
 asgiref~=3.8.1

@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from debate.models import Debate
 from debateme.models import Invite, InviteUse
 from discussion.models import Discussion
+from notifications.models import Notification
 
 
 def view_invite(request, invite_code):
@@ -61,10 +62,13 @@ def accept_invite(request, invite_code):
 
     # Create a new discussion and invite use
     discussion = Discussion.objects.create(debate=invite.debate, participant1=invite.creator, participant2=request.user)
-    InviteUse.objects.create(invite=invite, user=request.user, resulting_discussion=discussion)
+    invite_use = InviteUse.objects.create(invite=invite, user=request.user, resulting_discussion=discussion)
 
-    # Notify the participants of the new discussion
-    discussion.notify_participants()
+    # Add the discussion to the participants' live lists
+    discussion.add_discussion_to_participants_list_live()
+
+    # Notify the invite creator that the invite has been used and the discussion has started
+    Notification.objects.create_accepted_invite_notification(invite, invite_use, request.user)
 
     messages.success(request, f"Debate started successfully.")
 
