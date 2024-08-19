@@ -1,38 +1,32 @@
-{% extends 'base.html' %}
-
-{% block head %}
-    <style>
-        #notifications-spinner {
-            display: none;
-        }
-        
-        .htmx-request #notifications-spinner {
-            display: block;
-        }
-        
-        .htmx-request#notifications-spinner {
-            display: block;
-        }
-        
-    </style>
-{% endblock %}
-
-{% block content %}
-    <div class="container py-4">
+<div hx-indicator="#notification-spinner">
+    {% if is_dropdown %}
+        <h3 class="my-2 px-3">Notifications</h3>
+    {% else %}
         <h1 class="px-3">Notifications</h1>
-        <div>
-            <ul class="list-unstyled list-group"
-                id="notification-list"
-                hx-get="{% url 'get_notifications_page' %}"
-                hx-trigger="load"
-                hx-swap="afterbegin"
-                hx-indicator="#notifications-spinner">
-            </ul>
-            <div class="text-center my-2" id="notifications-spinner">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
+    {% endif %}
+    <div class="hstack px-3 my-2 gap-3" id="notification-filter"
+         hx-on::before-request="$('#notification-list').empty();"
+         hx-target="#notification-list"
+         hx-swap="innerHTML">
+        <input type="radio" class="btn-check" name="notification-filter" id="notification-filter-all"
+               autocomplete="off"
+               hx-get="{% url 'get_notifications_page' %}?dropdown={{ is_dropdown }}&unread_only=false"
+               hx-trigger="change, {{ is_dropdown|yesno:'intersect once,load' }}"
+               checked>
+        <label class="btn btn-outline-primary rounded-pill" for="notification-filter-all">All</label>
+
+        <input type="radio" class="btn-check" name="notification-filter" id="notification-filter-unread"
+               autocomplete="off"
+               hx-get="{% url 'get_notifications_page' %}?dropdown={{ is_dropdown }}&unread_only=true"
+               hx-trigger="change">
+        <label class="btn btn-outline-primary rounded-pill" for="notification-filter-unread">Unread</label>
+    </div>
+    <ul class="list-unstyled list-group"
+        id="notification-list">
+    </ul>
+    <div class="text-center my-2" id="notification-spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
     </div>
-{% endblock %}
+</div>

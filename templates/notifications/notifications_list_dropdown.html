@@ -1,19 +1,7 @@
 <div class="dropdown-menu dropdown-menu-end rounded-3 border-0 bg-light shadow"
      aria-labelledby="notification-dropdown"
-     style="width: min(500px, 100vh); height: min(700px, 100vh);"
-     hx-indicator="#notification-spinner-dropdown">
+     style="width: min(500px, 100vh); height: min(700px, 100vh);">
     <div class="h-100 overflow-y-auto px-2">
-        <h3 class="dropdown-header my-2 fs-3 text-dark py-0">Notifications</h3>
-        <ul class="list-unstyled list-group"
-            id="notification-list-dropdown"
-            hx-trigger="intersect once"
-            hx-get="{% url 'get_notifications_page' %}?dropdown=true"
-            hx-swap="afterbegin">
-        </ul>
-        <div class="text-center my-2" id="notification-spinner-dropdown">
-            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
+        {% include 'notifications/notifications_list.html' with is_dropdown=True %}
     </div>
 </div>

@@ -90,16 +90,16 @@
             background: darkgray;
         }
 
-        #notification-spinner-dropdown {
+        #notification-spinner {
             display: none;
         }
 
-        .htmx-request #notification-spinner-dropdown {
-            display: list-item;
+        .htmx-request #notification-spinner {
+            display: block;
         }
 
-        .htmx-request#notification-spinner-dropdown {
-            display: list-item;
+        .htmx-request#notification-spinner {
+            display: block;
         }
 
         .nav-item-icon:has(.nav-icon.show) {
@@ -178,7 +178,9 @@
                             <span class="visually-hidden">Unread Notification(s)</span>
                         </span>
                     </a>
-                    {% include 'notifications/notifications_list_dropdown.html' %}
+                    {% if request.resolver_match.url_name != 'list_notifications' %}
+                        {% include 'notifications/notifications_list_dropdown.html' %}
+                    {% endif %}
                 </div>
                 <div class="dropdown nav-item-icon">
                     <a class="nav-icon" href="#" role="button" id="account-dropdown" data-bs-toggle="dropdown"
@@ -288,25 +290,18 @@
         }
     });
     {% if user.is_authenticated %}
-        {% if request.resolver_match.url_name == 'list_notifications' %}
-            const notificationList = $('#notification-list');
-        {% else %}
-            const notificationList = $('#notification-list-dropdown');
-        {% endif %}
+        const notificationList = $('#notification-list');
 
         function handleNewNotification(data) {
             let element = $(`<li class="my-2">${data.html}</li>`);
-            {% if request.resolver_match.url_name == 'list_notifications' %}
-                {# If we are on the notifications page, we need to prepend the new notification #}
+            {# If we are not on the notifications page, we need to update the dropdown #}
+            {# If the dropdown was never opened before, we have nothing to do since it will be updated when opened #}
+            {# If the number of children li is greater than 0, then it has been opened before #}
+            {# If we are on the notifications page, the length of the notification list will always be larger than 0 #}
+            {# which means we will always prepend the new notification to the list #}
+            if (notificationList.children('li').length > 0) {
                 element.hide().prependTo(notificationList).slideDown();
-            {% else %}
-                {# If we are not on the notifications page, we need to update the dropdown #}
-                {# If the dropdown was never opened before, we have nothing to do since it will be updated when opened #}
-                {# If the number of children li is greater than 0, then it has been opened before #}
-                if (notificationList.children('li').length > 0) {
-                    element.hide().prependTo(notificationList).slideDown();
-                }
-            {% endif %}
+            }
         }
 
         function handleSetRead(data) {
