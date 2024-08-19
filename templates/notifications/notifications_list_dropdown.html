@@ -2,19 +2,18 @@
      aria-labelledby="notification-dropdown"
      style="width: min(500px, 100vh); height: min(700px, 100vh);"
      hx-indicator="#notification-spinner-dropdown">
-    <ul class="overflow-y-auto list-unstyled list-group h-100 px-2"
-        id="notification-list-dropdown">
-        <li class="my-2"
-            id="notification-header-dropdown"
+    <div class="h-100 overflow-y-auto px-2">
+        <h3 class="dropdown-header my-2 fs-3 text-dark py-0">Notifications</h3>
+        <ul class="list-unstyled list-group"
+            id="notification-list-dropdown"
             hx-trigger="intersect once"
             hx-get="{% url 'get_notifications_page' %}?dropdown=true"
-            hx-swap="afterend">
-            <h3 class="dropdown-header fs-3 text-dark py-0">Notifications</h3>
-        </li>
-    </ul>
-    <div class="text-center my-2" id="notification-spinner-dropdown">
-        <div class="spinner-border spinner-border-sm text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+            hx-swap="afterbegin">
+        </ul>
+        <div class="text-center my-2" id="notification-spinner-dropdown">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
         </div>
     </div>
 </div>

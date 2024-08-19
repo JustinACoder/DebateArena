@@ -292,7 +292,6 @@
             const notificationList = $('#notification-list');
         {% else %}
             const notificationList = $('#notification-list-dropdown');
-            const notificationDropdownHeader = $('#notification-header-dropdown');
         {% endif %}
 
         function handleNewNotification(data) {
@@ -303,10 +302,9 @@
             {% else %}
                 {# If we are not on the notifications page, we need to update the dropdown #}
                 {# If the dropdown was never opened before, we have nothing to do since it will be updated when opened #}
-                {# If the number of children li is greater than 1, then it has been opened before #}
-                {# This because the header is always present (so 1) but any other notification or notice will make the count greater than 1 #}
-                if (notificationList.children('li').not(notificationDropdownHeader).length > 0) {
-                    element.hide().insertAfter(notificationDropdownHeader).slideDown();
+                {# If the number of children li is greater than 0, then it has been opened before #}
+                if (notificationList.children('li').length > 0) {
+                    element.hide().prependTo(notificationList).slideDown();
                 }
             {% endif %}
         }
