@@ -167,7 +167,7 @@
                     <a class="nav-icon fs-4"
                        href="{% url 'list_notifications' %}" role="button"
                        data-is-current="{% if request.resolver_match.url_name == 'list_notifications' %}true{% else %}false{% endif %}"
-                       id="notification-dropdown"
+                       id="notification-dropdown-icon"
                        data-bs-toggle="dropdown"
                        data-bs-auto-close="outside"
                        aria-expanded="false">
@@ -292,6 +292,7 @@
     {% if user.is_authenticated %}
         const notificationList = $('#notification-list');
         const notificationBadge = $('#notification-badge');
+        const notificationDropdownIcon = $('#notification-dropdown-icon');
         let numberUnread = {{ request.user.num_unread_notifications }};
         
         function updateNumberUnread(increment) {
@@ -322,6 +323,19 @@
             
             // initialize timeago
             element.find('time.timeago').timeago();
+
+            {# If we are not on the notifications page, we will show a small popover under the notification bell #}
+            {# to indicate that there are new notifications #}
+            {% if request.resolver_match.url_name != 'list_notifications' %}
+                let popover = new bootstrap.Popover(notificationDropdownIcon, {
+                    content: 'New Notification!',
+                    placement: 'bottom',
+                    trigger: 'manual',
+                    boundary: 'viewport'
+                });
+                popover.show();
+                setTimeout(() => popover.hide(), 5000);
+            {% endif %}
         }
 
         function handleSetRead(data) {
