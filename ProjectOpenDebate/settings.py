@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    #'allauth.socialaccount.providers.google',
+    # 'allauth.socialaccount.providers.google',
     'debug_toolbar',
     'voting',
     'django_htmx',
@@ -84,6 +84,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'notifications.middleware.NotificationMiddleware',
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
@@ -193,7 +194,6 @@ ENDLESS_PAGINATION_SETTINGS = {
     'FIRST_PAGE_SIZE': 50,  # The size of the first page of a paginated list
     'PAGE_SIZE': 30,  # The size of the rest of the pages
 }
-
 
 # Admins
 ADMINS = [

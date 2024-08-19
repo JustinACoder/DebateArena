@@ -123,7 +123,7 @@
         .notification .stretched-link::after {
             z-index: auto !important;
         }
-        
+
         {#.notification:not(:hover) .dropdown:not(:has(:first-child.show)) {#}
         {#    display: none;#}
         {# }#}
@@ -172,6 +172,11 @@
                        data-bs-auto-close="outside"
                        aria-expanded="false">
                         <i class="bi bi-bell-fill"></i>
+                        <span class="position-absolute translate-middle p-2 bg-danger border border-light rounded-circle{% if request.user.num_unread_notifications == 0 %} d-none{% endif %}"
+                              id="notification-badge"
+                              style="top: calc(50% * (1 - cos(45deg))); left: calc(50% * (1 + cos(45deg)));">
+                            <span class="visually-hidden">Unread Notification(s)</span>
+                        </span>
                     </a>
                     {% include 'notifications/notifications_list_dropdown.html' %}
                 </div>
@@ -327,14 +332,14 @@
         function clickedNotification(event) {
             {# TODO: find a way to prevent the read marker from disappearing just before redirecting #}
             event.preventDefault();
-            
+
             {# We have to put this here and not a normal jquery listener bc notifications are loaded after the page #}
             // if the notification is not read, set it to read
             let notification = $(event.target).closest('.notification');
             if (notification.hasClass('unread')) {
                 toggleNotificationRead(notification, true);
             }
-            
+
             // redirect to the notification's redirect url
             window.location.href = $(this).attr('href');
         }
@@ -353,7 +358,7 @@
 
             // Make the notification icon active if we are on the notifications page
             $('.nav-icon[data-is-current="true"]').addClass('show').removeAttr('data-bs-toggle data-bs-auto-close');
-            
+
             // Add click event to notifications
             notificationList.on('click', '.notification a.stretched-link', clickedNotification);
 
