@@ -12,29 +12,45 @@
             overflow-y: auto;
             scrollbar-color: rgba(var(--bs-secondary-rgb)) transparent;
         }
-        
+
         #chat-list-canvas {
             width: 100%
         }
-        
+
         @media (min-width: 576px) {
             #chat-list-canvas {
                 width: 325px;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            #chat-list-canvas {
+                width: min(325px, 37.5%);
+            }
+            
+            #discussion-layout {
+                padding: 0.5rem; /* p-2 */
+                gap: 0.5rem; /* gap-2 */
+            }
+            
+            #discussion-layout .discussion-layout-section {
+                border-radius: 0.5rem; /* rounded-4 */
+                box-shadow:var(--bs-box-shadow); /* shadow */
             }
         }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid h-100">
+    <div class="container-fluid h-100 bg-primary-subtle">
         <div class="p-2 position-absolute start-0 end-0" style="margin: 0 20%">
             <button class="btn btn-primary d-md-none w-100 fs-5" type="button" data-bs-toggle="offcanvas"
                     data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas">
                 Open Discussion List
             </button>
         </div>
-        <div class="row flex-nowrap h-100">
-            <div class="col-auto px-0 pt-3 h-100 offcanvas-md offcanvas-start bg-secondary-subtle d-flex flex-column"
+        <div class="row flex-nowrap h-100" id="discussion-layout">
+            <div class="discussion-layout-section col-auto px-0 pt-3 h-100 offcanvas-md offcanvas-start d-flex flex-column bg-light"
                  id="chat-list-canvas">
                 <div class="hstack justify-content-between px-3 mb-3">
                     <h1 class="fs-3 mb-0 fw-bold">Discussions</h1>
@@ -52,7 +68,7 @@
                     {% include 'common/spinner.html' with id='chat-list-spinner' %}
                 </div>
             </div>
-            <div class="col d-flex flex-column p-0" id="current-chat">
+            <div class="discussion-layout-section col d-flex flex-column p-0 bg-light" id="current-chat">
                 <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3" id="chat-history">
                     {% if discussion_id is None %}
                         <div class="align-items-center justify-content-center d-flex">
