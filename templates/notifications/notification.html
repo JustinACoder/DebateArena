@@ -7,7 +7,6 @@
             <h6 class="mb-0">{{ notification.title }}</h6>
             {# TODO: determine the timezone based on the user/device #}
             <time class="timeago text-muted small"
-                  hx-on::load="$(this).timeago();"
                   datetime="{{ notification.created_at|timezone:"America/Montreal"|date:"c" }}"></time>
         </div>
         <p class="mb-0">{{ notification.message }}</p>

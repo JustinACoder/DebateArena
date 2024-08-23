@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 {% load crispy_forms_filters %}
-{% load tz %} {# used to force America/Montreal timezone, this should adapt to the user/device #}
 
 {% block head %}
     <style>
@@ -10,8 +9,18 @@
         }
 
         .overflow-y-scroll-custom {
-            overflow-y: scroll;
+            overflow-y: auto;
             scrollbar-color: rgba(var(--bs-secondary-rgb)) transparent;
+        }
+        
+        #chat-list-canvas {
+            width: 100%
+        }
+        
+        @media (min-width: 576px) {
+            #chat-list-canvas {
+                width: 325px;
+            }
         }
     </style>
 {% endblock %}
@@ -25,43 +34,22 @@
             </button>
         </div>
         <div class="row flex-nowrap h-100">
-            <div class="col-auto bg-light p-2 pe-0 h-100 offcanvas-md offcanvas-start"
-                 style="width: 300px"
+            <div class="col-auto px-0 pt-3 h-100 offcanvas-md offcanvas-start bg-secondary-subtle d-flex flex-column"
                  id="chat-list-canvas">
-                <div class="offcanvas-header">
-                    <h5 class="offcanvas-title">Your Discussions</h5>
-                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                <div class="hstack justify-content-between px-3 mb-3">
+                    <h1 class="fs-3 mb-0 fw-bold">Discussions</h1>
+                    <button type="button" class="btn-close text-reset d-md-none d-inline-block"
+                            data-bs-dismiss="offcanvas"
                             data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
                             aria-label="Close"></button>
                 </div>
-                <div class="overflow-y-scroll-custom h-100 w-100" id="chat-list">
-                    {% for discussion_info in discussions_info %}
-                        <a href="{% url 'specific_discussion' discussion_info.discussion_id %}"
-                           data-discussionid="{{ discussion_info.discussion_id }}"
-                           id="discussion-{{ discussion_info.discussion_id }}"
-                           data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas"
-                           aria-controls="chat-list-canvas"
-                           class="btn btn-light w-100 text-start my-2">
-                            <strong>{{ discussion_info.debate_title }}</strong><br>
-                            <span class="fst-italic">
-                        {% if request.user.id == discussion_info.participant1_id %}
-                            {{ discussion_info.participant2_username }}
-                        {% else %}
-                            {{ discussion_info.participant1_username }}
-                        {% endif %}
-                        </span><br>
-                            <div class="row">
-                            <span id="latest-message-{{ discussion_info.discussion_id }}"
-                                  class="fst-italic text-secondary small col">{{ discussion_info.message_text|default_if_none:'No message yet'|truncatechars:25 }}</span>
-                                {# TODO: determine the timezone based on the user/device #}
-                                <time class="timeago text-secondary small col-auto me-auto"
-                                      id="latest-message-time-{{ discussion_info.discussion_id }}"
-                                      datetime="{{ discussion_info.message_created_at|timezone:"America/Montreal"|date:"c" }}"></time>
-                            </div>
-                        </a>
-                    {% empty %}
-                        <p class="text-center" id="no-discussions">No discussions yet.</p>
-                    {% endfor %}
+                <div id="chat-list-div" class="overflow-y-scroll-custom vstack px-2"
+                     hx-indicator="#chat-list-spinner">
+                    <ul class="list-unstyled" id="chat-list"
+                        hx-get="{% url 'get_discussion_page' %}" hx-trigger="load"
+                        hx-on::after-swap="$(this).find('time.timeago').timeago();">
+                    </ul>
+                    {% include 'common/spinner.html' with id='chat-list-spinner' %}
                 </div>
             </div>
             <div class="col d-flex flex-column p-0" id="current-chat">
