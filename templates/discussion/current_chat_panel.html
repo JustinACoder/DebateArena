@@ -1,0 +1,39 @@
+{% load crispy_forms_filters %}
+
+<div class="discussion-layout-section col d-flex flex-column p-0 bg-light" id="current-chat">
+    <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3"
+         hx-indicator="#message-spinner">
+        <div id="message-list-container"
+                {% if discussion_id is not None %}
+             hx-trigger="load"
+             hx-get="{% url 'get_message_page' discussion_id %}">
+                {% else %}
+                    >
+                    <div class="align-items-center justify-content-center d-flex">
+                        <p class="text-secondary m-4">
+                            Once you have a discussion, you will be able to see it here. To start debating with
+                            someone,
+                            choose a debate from the <a href="{% url 'debate_explore' %}">explore page</a>, take a
+                            stance,
+                            and request a discussion with another user of the stance of your choice.
+                        </p>
+                    </div>
+                {% endif %}
+        </div>
+        {% include 'common/spinner.html' with id='message-spinner' %}
+    </div>
+    <div class="mt-3 px-3 border-top" id="message-box">
+        <form id="message-form">
+            <div class="row">
+                <div class="col">
+                    {{ message_form.text | as_crispy_field }}
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"
+                            id="send-message" {{ discussion_id|yesno:",,disabled" }}>Send
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

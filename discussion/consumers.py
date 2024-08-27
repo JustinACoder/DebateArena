@@ -1,5 +1,7 @@
+from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 from django.db.models import Q
+from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
 from .forms import MessageForm
@@ -55,12 +57,24 @@ class MessageConsumer(CustomBaseConsumer):
         # Save the message to the database
         messageForm = MessageForm({'text': message})
         if messageForm.is_valid():
-            message.instance.discussion_id = discussion.id
-            message.instance.author = user
-            await message.asave()
+            messageForm.instance.discussion_id = discussion.id
+            messageForm.instance.author = user
+            message_instance = await database_sync_to_async(messageForm.save)()
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid message'})
             return
+
+        # Render the message to send to the participants
+        context_sender = {
+            'message': message_instance,
+            'is_current_user': True,
+        }
+        context_receiver = {
+            'message': message_instance,
+            'is_current_user': False,
+        }
+        message_sender_html = render_to_string('discussion/message.html', context=context_sender)
+        message_receiver_html = render_to_string('discussion/message.html', context=context_receiver)
 
         # Send the message to all participants in the discussion
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
@@ -77,6 +91,7 @@ class MessageConsumer(CustomBaseConsumer):
                         'sender_id': user.id,
                         'sender': user.username,
                         'message': message,
+                        'html': message_sender_html if participant_id == user.id else message_receiver_html,
                     }
                 }
             )

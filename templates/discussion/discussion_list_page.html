@@ -7,38 +7,12 @@
                 hx-get="{% url 'get_discussion_page' %}?page={{ page.next_page_number }}"
                 hx-swap="afterend"
             {% endif %}>
-        <a href="{% url 'specific_discussion' discussion.id %}"
-           data-discussionid="{{ discussion.id }}"
-           id="discussion-{{ discussion.id }}"
-           data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas"
-           aria-controls="chat-list-canvas"
-           class="btn btn-light border-0 w-100 text-start">
-            <strong>{{ discussion.debate.title }}</strong><br>
-            <span class="fst-italic">
-            {% if request.user == discussion.participant1 %}
-                {{ discussion.participant2.username }}
-            {% else %}
-                {{ discussion.participant1.username }}
-            {% endif %}
-        </span><br>
-            <div class="row">
-            <span id="latest-message-{{ discussion.id }}"
-                  class="fst-italic text-secondary small col">{{ discussion.latest_message_text|default_if_none:'No message yet'|truncatechars:25 }}</span>
-                {# TODO: determine the timezone based on the user/device #}
-                <time class="timeago text-secondary small col-auto me-auto"
-                      id="latest-message-time-{{ discussion.id }}"
-                      datetime="{{ discussion.latest_message_date|timezone:"America/Montreal"|date:"c" }}"></time>
-            </div>
-        </a>
+        {% include 'discussion/discussion.html' with discussion=discussion %}
     </li>
 {% empty %}
-    <li>
-        <p>No discussions yet.</p>
-    </li>
+    <li id="discussions-notice" class="my-2 text-center text-muted">No discussions yet.</li>
 {% endfor %}
 
 {% if not page.has_next and page %}
-    <li class="py-2">
-        <p class="text-center mb-0">No more discussions.</p>
-    </li>
+    <li id="discussions-notice" class="my-2 text-center text-muted">No more discussions.</li>
 {% endif %}

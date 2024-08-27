@@ -1,0 +1,25 @@
+{# TODO: should we really put ul for the first page or should it always be in the template? #}
+{% if page.number == 1 %}
+    <ul class="list-unstyled" id="message-list">
+{% endif %}
+
+{% if page and not page.has_next %}
+    <li class="text-center text-muted my-2">Start of discussion</li>
+{% endif %}
+
+{% for message in page reversed %}
+    <li
+            {% if forloop.first and page.has_next %}
+                hx-trigger="intersect once"
+                hx-get="{% url 'get_message_page' discussion.id %}?page={{ page.next_page_number }}"
+                hx-swap="beforebegin"
+            {% endif %}>
+        {% include 'discussion/message.html' with message=message is_current_user=message.is_current_user %}
+    </li>
+{% empty %}
+    <li class="text-center text-muted my-2">No messages yet</li>
+{% endfor %}
+
+{% if page.number == 1 %}   
+    </ul>
+{% endif %}

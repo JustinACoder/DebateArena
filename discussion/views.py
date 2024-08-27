@@ -55,7 +55,7 @@ def discussion_default(request):
     # Get the most recent discussion
     most_recent_discussion = get_most_recent_discussions_queryset(request.user).first()
     most_recent_discussion_id = most_recent_discussion.id if most_recent_discussion else None
-    return specific_discussion(request, most_recent_discussion_id)
+    return redirect('specific_discussion', discussion_id=most_recent_discussion_id)
 
 
 @login_required
@@ -83,68 +83,39 @@ def get_discussion_page(request):
     return render(request, 'discussion/discussion_list_page.html', {'page': page})
 
 
-
 @login_required
-@require_GET
-def retrieve_messages(request, discussion_id):
-    # Note: I decided not to use Paginator or django-el-pagination for this since it is pretty simple and would be
-    # more complex to implement with those tools.
-
-    # Get page number and determine if the user wants discussion info
-    page = request.GET.get('page', '1')  # Starts at 1
-    include_discussion_info = request.GET.get('include_discussion_info', 'false')
-
-    # Ensure that the values are valid
-    if not page.isdigit() or not include_discussion_info in ['true', 'false']:
-        return HttpResponseBadRequest()
-
-    page = int(page)
-    include_discussion_info = include_discussion_info == 'true'
-
-    # From the page number, calculate the start (inclusive) and end (exclusive) indexes
-    first_page_size = settings.ENDLESS_PAGINATION_SETTINGS['FIRST_PAGE_SIZE']
-    other_page_size = settings.ENDLESS_PAGINATION_SETTINGS['PAGE_SIZE']
-    if page == 1:
-        start = 0
-        end = first_page_size
-    else:
-        start = first_page_size + (page - 2) * other_page_size
-        end = start + other_page_size
-
-    # Get messages and discussion info
+def get_message_page(request, discussion_id):
+    # Get the discussion
     discussion_instance = get_object_or_404(
         Discussion.objects  # TODO: should we return 403 if the user is not a participant?
         .filter(Q(participant1=request.user) | Q(participant2=request.user))
         .prefetch_related('message_set')
         .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
-    messages = (discussion_instance.message_set.order_by('-created_at').annotate(
+
+    # Get the messages
+    messages = discussion_instance.message_set.order_by('-created_at').annotate(
         is_current_user=Case(
             When(author=request.user, then=Value(True)),
             default=Value(False),
             output_field=BooleanField()
         )
-    ).values('id', 'author__username', 'text', 'created_at', 'is_current_user'))
+    )
 
-    # Initialize response data
-    # To determine if there is a next page, we try to get one more message than the page size
-    # If we retrieve page size + 1 messages, there is a next page, otherwise there isn't
-    # If there is a next page, we remove the last message from the results since it belongs to the next page
-    # Otherwise, we return all the messages since they all belong to the current page
-    results = list(messages[start:end + 1])
-    expected_message_count = end - start + 1
-    has_next = len(results) == expected_message_count
-    messages_to_return = results[:-1] if has_next else results
-    data = {'messages': messages_to_return, 'has_next': has_next}
+    # Create the paginator
+    paginator = Paginator(messages, 30)
+    page = paginator.get_page(request.GET.get('page', '1'))
 
-    # If the user wants discussion info, include it in the response
-    if include_discussion_info:
-        data['discussion'] = {
-            'id': discussion_instance.id,
-            'debate': discussion_instance.debate.title,
-            'participants': [
-                {'id': discussion_instance.participant1_id, 'username': discussion_instance.participant1.username},
-                {'id': discussion_instance.participant2_id, 'username': discussion_instance.participant2.username},
-            ],
-        }
+    return render(request, 'discussion/message_list_page.html', {'page': page, 'discussion': discussion_instance})
 
-    return JsonResponse(data)
+
+def get_single_discussion(request):
+    # Get the discussion id
+    discussion_id = request.GET.get('discussion_id')
+
+    # Get the discussion
+    discussion_instance = get_most_recent_discussions_queryset(request.user).filter(pk=discussion_id).first()
+
+    if discussion_instance is None:
+        return HttpResponseNotFound()
+
+    return render(request, 'discussion/discussion.html', {'discussion': discussion_instance})

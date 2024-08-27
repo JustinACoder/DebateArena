@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import get_user_group_name
 from debate.models import Debate
@@ -17,6 +18,9 @@ class Discussion(models.Model):
         # Get current channel layer
         channel_layer = get_channel_layer()
 
+        # Render discussion to send to the participants
+        discussion_html = render_to_string('discussion/discussion.html', context={'discussion': self})
+
         for participant_id in [self.participant1_id, self.participant2_id]:
             user_group_name = get_user_group_name('DiscussionConsumer', participant_id)
 
@@ -33,12 +37,7 @@ class Discussion(models.Model):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': self.id,
-                        'debate_id': self.debate.id,
-                        'debate_title': self.debate.title,
-                        'participant1_id': self.participant1_id,
-                        'participant1_username': self.participant1.username,
-                        'participant2_id': self.participant2_id,
-                        'participant2_username': self.participant2.username,
+                        'html': discussion_html,
                     }
                 }
             )

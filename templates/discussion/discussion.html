@@ -1,0 +1,31 @@
+{% load tz %}
+
+<a href="{% url 'specific_discussion' discussion.id %}"
+   data-discussionid="{{ discussion.id }}"
+   id="discussion-{{ discussion.id }}"
+   data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas"
+   aria-controls="chat-list-canvas"
+   class="btn btn-light border-0 w-100 text-start"
+   hx-get="{% url 'get_message_page' discussion.id %}"
+   hx-target="#message-list-container"
+   hx-push-url="{% url 'specific_discussion' discussion.id %}"
+   hx-indicator="#message-spinner"
+   hx-on::before-request="$('#message-list-container').empty();">
+    <strong>{{ discussion.debate.title }}</strong><br>
+    <div>with <span class="fst-italic"> 
+            {% if request.user == discussion.participant1 %}
+                {{ discussion.participant2.username }}
+            {% else %}
+                {{ discussion.participant1.username }}
+            {% endif %}
+        </span>
+    </div>
+    <div class="row">
+        <span id="latest-message-{{ discussion.id }}"
+              class="fst-italic text-secondary small col text-truncate pe-1">{{ discussion.latest_message_text|default_if_none:'No message yet'|truncatechars:75 }}</span>
+        {# TODO: determine the timezone based on the user/device #}
+        <time class="timeago text-secondary small col-auto me-auto ps-0"
+              id="latest-message-time-{{ discussion.id }}"
+              datetime="{{ discussion.latest_message_date|timezone:"America/Montreal"|date:"c" }}"></time>
+    </div>
+</a>
