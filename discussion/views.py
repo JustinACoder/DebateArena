@@ -16,17 +16,6 @@ from discussion.models import Discussion, Message
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
 
 
-def dictfetchall(cursor):
-    """
-    Return all rows from a cursor as a dict.
-    Assume the column names are unique.
-
-    Source: https://docs.djangoproject.com/en/5.0/topics/db/sql/
-    """
-    columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-
 def get_most_recent_discussions_queryset(user):
     """
     Get a queryset with the most recent discussions for the user. A discussion datetime is the maximum datetime
@@ -36,6 +25,9 @@ def get_most_recent_discussions_queryset(user):
     :return: Queryset of discussions with the most recent datetime
     """
     # TODO: denormalize the db by adding a latest_message one-to-one field to Discussion for large scale
+    # OR we can create a composite index on (discussion_id, created_at) for the message table
+    # and then use a subquery to get the latest message for each discussion
+    # This would result in a simpler, highly optimized query that works very well with the ORM
     return Discussion.objects.annotate(
         latest_message_date=Max('message__created_at'),  # Using reverse relation from Discussion to Message
         latest_message_text=Max('message__text'),
@@ -108,6 +100,7 @@ def get_message_page(request, discussion_id):
     return render(request, 'discussion/message_list_page.html', {'page': page, 'discussion': discussion_instance})
 
 
+@login_required
 def get_single_discussion(request):
     # Get the discussion id
     discussion_id = request.GET.get('discussion_id')
