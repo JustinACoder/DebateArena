@@ -1,7 +1,7 @@
 {% load crispy_forms_filters %}
 
 <div class="discussion-layout-section flex-grow-1 h-100 d-flex flex-column p-0 bg-light" id="current-chat">
-    <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3"
+    <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom"
          hx-indicator="#message-spinner">
         <div id="message-list-container"
                 {% if discussion_id is not None %}
