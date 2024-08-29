@@ -1,6 +1,6 @@
 {% load crispy_forms_filters %}
 
-<div class="discussion-layout-section col d-flex flex-column p-0 bg-light" id="current-chat">
+<div class="discussion-layout-section flex-grow-1 h-100 d-flex flex-column p-0 bg-light" id="current-chat">
     <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3"
          hx-indicator="#message-spinner">
         <div id="message-list-container"
@@ -22,13 +22,22 @@
         </div>
         {% include 'common/spinner.html' with id='message-spinner' %}
     </div>
-    <div class="mt-3 px-3 border-top" id="message-box">
+    <div class="px-3 py-2 border-top" id="message-box">
         <form id="message-form">
-            <div class="row">
-                <div class="col">
-                    {{ message_form.text | as_crispy_field }}
+            <div class="hstack gap-2 align-items-end">
+                <div class="flex-grow-1">
+                    {# I decided to not display it from form because it would actually be more complex #}
+                    {# Also, we do not refresh page on message send so the error message wouldnt make it back #}
+                    {# And there are no potential error message that we would want to send back anyway #}
+                    <label for="message-text" class="visually-hidden">Message To Send</label>
+                    <textarea class="form-control mt-0"
+                              style="resize: none;"
+                              id="message-text"
+                              maxlength="5000"
+                              rows="1"
+                              placeholder="Type a message..."></textarea>
                 </div>
-                <div class="col-auto">
+                <div class="flex-shrink-1">
                     <button type="submit" class="btn btn-primary"
                             id="send-message" {{ discussion_id|yesno:",,disabled" }}>Send
                     </button>

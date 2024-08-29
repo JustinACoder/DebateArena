@@ -22,34 +22,34 @@
                 width: 325px;
             }
         }
-        
+
         @media (min-width: 768px) {
             #chat-list-canvas {
                 width: min(325px, 37.5%);
             }
-            
+
             #discussion-layout {
                 padding: 0.5rem; /* p-2 */
                 gap: 0.5rem; /* gap-2 */
             }
-            
+
             #discussion-layout .discussion-layout-section {
                 border-radius: 0.5rem; /* rounded-4 */
-                box-shadow:var(--bs-box-shadow); /* shadow */
+                box-shadow: var(--bs-box-shadow); /* shadow */
             }
         }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid h-100 bg-primary-subtle">
+    <div class="h-100 bg-primary-subtle">
         <div class="p-2 position-absolute start-0 end-0" style="margin: 0 20%">
             <button class="btn btn-primary d-md-none w-100 fs-5" type="button" data-bs-toggle="offcanvas"
                     data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas">
                 Open Discussion List
             </button>
         </div>
-        <div class="row flex-nowrap h-100" id="discussion-layout">
+        <div class="hstack h-100" id="discussion-layout">
             {% include 'discussion/discussion_list_panel.html' %}
             {% include 'discussion/current_chat_panel.html' %} {# needs a message_form #}
         </div>
@@ -61,7 +61,7 @@
         /* Switching between chats */
         const chatList = $('#chat-list');
         const allChats = $('#chat-list a');
-        
+
         /* WebSocket chat */
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         websocketManager.add_handler('message', 'new_message', handle_new_message);
@@ -82,7 +82,7 @@
 
         function handle_new_discussion(data) {
             let element = $(`<li>${data['html']}</li>`);
-            
+
             // If the list is empty, change the notice
             if (allChats.length === 1) {
                 $('#discussions-notice').text('No more discussions.');
@@ -93,11 +93,11 @@
         }
 
         const form = $('#message-form');
-        const messageInput = $('#message-text-input');
+        const messageInput = $('#message-text');
         const sendButton = $('#send-message');
         form.submit(function (event) {
             event.preventDefault();
-            let message = messageInput[0].value.trim();
+            let message = messageInput.val().trim();
 
             if (sendButton.prop('disabled') || message === '') {
                 return;
@@ -105,16 +105,16 @@
 
             websocketManager.send_chat_message(currentDiscussionId, message);
 
-            messageInput[0].value = '';
+            messageInput.val('');
 
             {# Note: we do not add the message to the chat history here, #}
             {# because we are waiting for the websocket to send it back #}
             {# This serves as a confirmation that the message was sent #}
         });
-        
+
         function updateMostRecent(discussionId, message) {
             let relatedDiscussion = $('#discussion-' + discussionId);
-            
+
             // If the discussion is not in the chat list, fetch it
             // Note: no need to then update the latest message as it will come with the discussion
             {# TODO: needs testing #}
@@ -148,6 +148,35 @@
                 event.preventDefault();
                 form.submit();
             }
+        });
+
+        {# TODO: all of this can be changed by field-sizing: content (in the future) #}
+        messageInput.on('input', function () {
+            // Remove rows until the scrollHeight is less than the offsetHeight
+            while (messageInput[0].offsetHeight > messageInput[0].scrollHeight
+            && messageInput.prop('rows') > 1) {
+                messageInput.prop('rows', messageInput.prop('rows') - 1);
+            }
+
+            // Add rows until the scrollHeight is greater than the offsetHeight
+            while (messageInput[0].offsetHeight < messageInput[0].scrollHeight
+            && messageInput[0].offsetHeight < 400
+            && messageInput[0].offsetHeight < 0.3 * window.innerHeight) {
+                messageInput.prop('rows', messageInput.prop('rows') + 1);
+            }
+
+            // try to remove one row (now that the scrollbar isnt there anymore)
+            if (messageInput.prop('rows') > 1) {
+                messageInput.prop('rows', messageInput.prop('rows') - 1);
+                if (messageInput[0].offsetHeight < messageInput[0].scrollHeight) {
+                    messageInput.prop('rows', messageInput.prop('rows') + 1);
+                }
+            }
+
+            /*messageInput.css('overflow-y', 'hidden')
+            messageInput.css('height', 'auto');
+            messageInput.css('height', `min(${messageInput[0].scrollHeight + 2}px, 600px, 50vh)`);
+            messageInput.css('overflow-y', 'auto');*/
         });
     </script>
 {% endblock %}
