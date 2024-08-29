@@ -10,7 +10,8 @@
    hx-target="#message-list-container"
    hx-push-url="{% url 'specific_discussion' discussion.id %}"
    hx-indicator="#message-spinner"
-   hx-on::before-request="$('#message-list-container').empty();">
+   hx-on::before-request="$('#message-list-container').empty();"
+   hx-on::after-request="$('#send-message').prop('disabled', false);">
     <strong>{{ discussion.debate.title }}</strong><br>
     <div>with <span class="fst-italic"> 
             {% if request.user == discussion.participant1 %}
