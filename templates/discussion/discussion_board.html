@@ -43,15 +43,9 @@
 
 {% block content %}
     <div class="h-100 bg-primary-subtle">
-        <div class="p-2 position-absolute start-0 end-0" style="margin: 0 20%">
-            <button class="btn btn-primary d-md-none w-100 fs-5" type="button" data-bs-toggle="offcanvas"
-                    data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas">
-                Open Discussion List
-            </button>
-        </div>
         <div class="hstack h-100" id="discussion-layout">
             {% include 'discussion/discussion_list_panel.html' %}
-            {% include 'discussion/current_chat_panel.html' %} {# needs a message_form #}
+            {% include 'discussion/current_chat_panel.html' %}
         </div>
     </div>
 
@@ -60,7 +54,6 @@
         {# TODO: make sure the websocket connection stays open for long periods of time (?) #}
         /* Switching between chats */
         const chatList = $('#chat-list');
-        const allChats = $('#chat-list a');
 
         /* WebSocket chat */
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
@@ -84,7 +77,7 @@
             let element = $(`<li>${data['html']}</li>`);
 
             // If the list is empty, change the notice
-            if (allChats.length === 1) {
+            if (chatList.length === 1) {
                 $('#discussions-notice').text('No more discussions.');
             }
 
@@ -106,6 +99,7 @@
             websocketManager.send_chat_message(currentDiscussionId, message);
 
             messageInput.val('');
+            messageInput.prop('rows', 1);
 
             {# Note: we do not add the message to the chat history here, #}
             {# because we are waiting for the websocket to send it back #}
