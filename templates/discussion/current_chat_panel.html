@@ -8,7 +8,7 @@
         {% endif %}>
     <div id="current-chat-content" class="h-100 d-flex flex-column"
          hx-indicator="#current-chat-spinner" style="container-type: inline-size;">
-        {% if discussion is None %}
+        {% if discussion_id is None %}
             <div class="container container-relative h-100 align-items-center justify-content-center d-flex">
                 <p class="text-secondary text-center">
                     Once you have a discussion, you will be able to see it here. To start debating with
