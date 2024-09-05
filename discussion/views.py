@@ -25,7 +25,7 @@ def get_most_recent_discussions_queryset(user):
     :return: Queryset of discussions with the most recent datetime
     """
     # TODO: denormalize the db by adding a latest_message one-to-one field to Discussion for large scale
-    # OR we can create a composite index on (discussion_id, created_at) for the message table
+    # OR even better, we can create a composite index on (discussion_id, created_at) for the message table
     # and then use a subquery to get the latest message for each discussion
     # This would result in a simpler, highly optimized query that works very well with the ORM
     return Discussion.objects.annotate(
@@ -46,14 +46,19 @@ def get_most_recent_discussions_queryset(user):
 def discussion_default(request):
     # Get the most recent discussion
     most_recent_discussion = get_most_recent_discussions_queryset(request.user).first()
-    most_recent_discussion_id = most_recent_discussion.id if most_recent_discussion else None
-    return redirect('specific_discussion', discussion_id=most_recent_discussion_id)
+
+    if most_recent_discussion:
+        return redirect('specific_discussion', discussion_id=most_recent_discussion.id)
+    else:
+        return render(request, 'discussion/discussion_board.html',
+                      {'message_form': MessageForm(), 'discussion_id': None})
 
 
 @login_required
 def specific_discussion(request, discussion_id):
     # If the current user is not a participant in the discussion, return 403
-    if discussion_id is not None and not Discussion.objects.filter(Q(participant1=request.user) | Q(participant2=request.user), pk=discussion_id).exists():
+    if discussion_id is not None and not Discussion.objects.filter(
+            Q(participant1=request.user) | Q(participant2=request.user), pk=discussion_id).exists():
         return HttpResponseForbidden()
 
     context = {
@@ -76,7 +81,7 @@ def get_discussion_page(request):
 
 
 @login_required
-def get_message_page(request, discussion_id):
+def get_current_chat_page(request, discussion_id):
     # Get the discussion
     discussion_instance = get_object_or_404(
         Discussion.objects  # TODO: should we return 403 if the user is not a participant?
@@ -97,7 +102,7 @@ def get_message_page(request, discussion_id):
     paginator = Paginator(messages, 30)
     page = paginator.get_page(request.GET.get('page', '1'))
 
-    return render(request, 'discussion/message_list_page.html', {'page': page, 'discussion': discussion_instance})
+    return render(request, 'discussion/current_chat_page.html', {'page': page, 'discussion': discussion_instance})
 
 
 @login_required

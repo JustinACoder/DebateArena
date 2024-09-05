@@ -25,7 +25,7 @@
 
         @media (min-width: 768px) {
             #chat-list-canvas {
-                width: min(325px, 37.5%);
+                width: min(325px, 37.5vw);
             }
 
             #discussion-layout {
@@ -36,6 +36,47 @@
             #discussion-layout .discussion-layout-section {
                 border-radius: 0.5rem; /* rounded-4 */
                 box-shadow: var(--bs-box-shadow); /* shadow */
+            }
+        }
+
+        @supports (field-sizing: content) {
+            #current-chat, #message-form  .flex-grow-1:has(> textarea) {
+                min-width: 0;
+            }
+
+            #message-form textarea {
+                field-sizing: content;
+                max-height: min(400px, 30vh);
+            }
+        }
+        
+        @container (min-width: 576px) {
+            .container-relative {
+                max-width: 540px !important;
+            }
+        }
+        
+        @container (min-width: 768px) {
+            .container-relative {
+                max-width: 720px !important;
+            }
+        }
+        
+        @container (min-width: 992px) {
+            .container-relative {
+                max-width: 960px !important;
+            }
+        }
+        
+        @container (min-width: 1200px) {
+            .container-relative {
+                max-width: 1140px !important;
+            }
+        }
+        
+        @container (min-width: 1400px) {
+            .container-relative {
+                max-width: 1320px !important;
             }
         }
     </style>
@@ -85,27 +126,6 @@
             element.hide().prependTo(chatList).slideDown();
         }
 
-        const form = $('#message-form');
-        const messageInput = $('#message-text');
-        const sendButton = $('#send-message');
-        form.submit(function (event) {
-            event.preventDefault();
-            let message = messageInput.val().trim();
-
-            if (sendButton.prop('disabled') || message === '') {
-                return;
-            }
-
-            websocketManager.send_chat_message(currentDiscussionId, message);
-
-            messageInput.val('');
-            messageInput.prop('rows', 1);
-
-            {# Note: we do not add the message to the chat history here, #}
-            {# because we are waiting for the websocket to send it back #}
-            {# This serves as a confirmation that the message was sent #}
-        });
-
         function updateMostRecent(discussionId, message) {
             let relatedDiscussion = $('#discussion-' + discussionId);
 
@@ -135,42 +155,75 @@
             chatList.prepend(discussion);
         }
 
-        // Make the Enter key submit the form
-        // Make alt, ctrl, shift + Enter add a new line
-        messageInput.keypress(function (event) {
-            if (event.which === 13 && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+
+        function setup_chat(element) {
+            let form = element.find('#message-form');
+            let textarea = form.find('textarea');
+            let discussionId = parseInt(form.find('input[name="discussion_id"]').val());
+            currentDiscussionId = discussionId;
+
+            // form listener
+            form.submit(function (event) {
                 event.preventDefault();
-                form.submit();
-            }
-        });
+                let message = textarea.val().trim();
 
-        {# TODO: all of this can be changed by field-sizing: content (in the future) #}
-        messageInput.on('input', function () {
-            // Remove rows until the scrollHeight is less than the offsetHeight
-            while (messageInput[0].offsetHeight > messageInput[0].scrollHeight
-            && messageInput.prop('rows') > 1) {
-                messageInput.prop('rows', messageInput.prop('rows') - 1);
-            }
-
-            // Add rows until the scrollHeight is greater than the offsetHeight
-            while (messageInput[0].offsetHeight < messageInput[0].scrollHeight
-            && messageInput[0].offsetHeight < 400
-            && messageInput[0].offsetHeight < 0.3 * window.innerHeight) {
-                messageInput.prop('rows', messageInput.prop('rows') + 1);
-            }
-
-            // try to remove one row (now that the scrollbar isnt there anymore)
-            if (messageInput.prop('rows') > 1) {
-                messageInput.prop('rows', messageInput.prop('rows') - 1);
-                if (messageInput[0].offsetHeight < messageInput[0].scrollHeight) {
-                    messageInput.prop('rows', messageInput.prop('rows') + 1);
+                if (message === '') {
+                    return;
                 }
+
+                websocketManager.send_chat_message(discussionId, message);
+
+                textarea.val('');
+                textarea.prop('rows', 1);
+
+                {# Note: we do not add the message to the chat history here, #}
+                {# because we are waiting for the websocket to send it back #}
+                {# This serves as a confirmation that the message was sent #}
+            });
+
+            // Make the Enter key submit the form
+            // Make alt, ctrl, shift + Enter add a new line
+            textarea.keypress(function (event) {
+                if (event.which === 13 && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+                    event.preventDefault();
+                    form.submit();
+                }
+            });
+
+            // Check if field-sizing: content is supported
+            if (textarea.css('field-sizing') === 'content') {
+                return;
             }
 
-            /*messageInput.css('overflow-y', 'hidden')
-            messageInput.css('height', 'auto');
-            messageInput.css('height', `min(${messageInput[0].scrollHeight + 2}px, 600px, 50vh)`);
-            messageInput.css('overflow-y', 'auto');*/
-        });
+            {# TODO: all of this can be changed by field-sizing: content (in the future) #}
+            {# Not the exact same behaviour. A scrollbar may appear when adding a character in the middle of a row #}
+            textarea.on('input', function () {
+                // Remove rows until the scrollHeight is less than the offsetHeight
+                while (textarea[0].offsetHeight > textarea[0].scrollHeight
+                && textarea.prop('rows') > 1) {
+                    textarea.prop('rows', textarea.prop('rows') - 1);
+                }
+
+                // Add rows until the scrollHeight is greater than the offsetHeight
+                while (textarea[0].offsetHeight < textarea[0].scrollHeight
+                && textarea[0].offsetHeight < 400
+                && textarea[0].offsetHeight < 0.3 * window.innerHeight) {
+                    textarea.prop('rows', textarea.prop('rows') + 1);
+                }
+
+                // try to remove one row (now that the scrollbar isnt there anymore)
+                if (textarea.prop('rows') > 1) {
+                    textarea.prop('rows', textarea.prop('rows') - 1);
+                    if (textarea[0].offsetHeight < textarea[0].scrollHeight) {
+                        textarea.prop('rows', textarea.prop('rows') + 1);
+                    }
+                }
+
+                /*messageInput.css('overflow-y', 'hidden')
+                messageInput.css('height', 'auto');
+                messageInput.css('height', `min(${messageInput[0].scrollHeight + 2}px, 600px, 50vh)`);
+                messageInput.css('overflow-y', 'auto');*/
+            });
+        }
     </script>
 {% endblock %}
