@@ -1,15 +1,10 @@
-import time
-
-from django.conf import settings
-from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q, Window, F, BooleanField, When, Case, Value, TextField, OuterRef, Subquery, Max
+from django.db.models import Q, F, BooleanField, When, Case, Value, Max
 from django.contrib.auth.decorators import login_required
-from django.db.models.functions import FirstValue, Coalesce, Greatest
+from django.db.models.functions import Greatest
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db import connection
-from django.views.decorators.http import require_POST, require_GET
 
+from ProjectOpenDebate.common.decorators import login_required_htmx
 from debate.models import Debate
 from discussion.forms import MessageForm
 from discussion.models import Discussion, Message
@@ -57,7 +52,7 @@ def discussion_default(request):
 @login_required
 def specific_discussion(request, discussion_id):
     # If the current user is not a participant in the discussion, return 403
-    if discussion_id is not None and not Discussion.objects.filter(
+    if not Discussion.objects.filter(
             Q(participant1=request.user) | Q(participant2=request.user), pk=discussion_id).exists():
         return HttpResponseForbidden()
 
@@ -69,7 +64,7 @@ def specific_discussion(request, discussion_id):
     return render(request, 'discussion/discussion_board.html', context=context)
 
 
-@login_required
+@login_required_htmx
 def get_discussion_page(request):
     discussions_queryset = get_most_recent_discussions_queryset(request.user)
 
@@ -80,7 +75,7 @@ def get_discussion_page(request):
     return render(request, 'discussion/discussion_list_page.html', {'page': page})
 
 
-@login_required
+@login_required_htmx
 def get_current_chat_page(request, discussion_id):
     # Get the discussion
     discussion_instance = get_object_or_404(
@@ -105,7 +100,7 @@ def get_current_chat_page(request, discussion_id):
     return render(request, 'discussion/current_chat_page.html', {'page': page, 'discussion': discussion_instance})
 
 
-@login_required
+@login_required_htmx
 def get_single_discussion(request):
     # Get the discussion id
     discussion_id = request.GET.get('discussion_id')
