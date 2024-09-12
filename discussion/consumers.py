@@ -5,7 +5,8 @@ from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
 from .forms import MessageForm
-from .models import Discussion
+from .models import Discussion, Message
+from .views import set_message_additional_fields
 
 
 class MessageConsumer(CustomBaseConsumer):
@@ -64,6 +65,19 @@ class MessageConsumer(CustomBaseConsumer):
             await self.send_json({'status': 'error', 'message': 'Invalid message'})
             return
 
+        # Set additional fields for the message
+        # TODO: This is a bit hacky, we should find a better way to do this
+        previous_message = await discussion.message_set.order_by('-created_at').exclude(id=message_instance.id).afirst()
+        message_instance.prev_message_created_at = previous_message.created_at if previous_message else None
+        set_message_additional_fields(message_instance)
+
+        # If the message is the first message in the group, render the time separator as well
+        if message_instance.first_of_group:
+            separator_html = render_to_string('discussion/datetime_separator.html',
+                                              context={'formatted_datetime': message_instance.formatted_datetime})
+        else:
+            separator_html = ""
+
         # Render the message to send to the participants
         context_sender = {
             'message': message_instance,
@@ -92,6 +106,7 @@ class MessageConsumer(CustomBaseConsumer):
                         'sender': user.username,
                         'message': message,
                         'html': message_sender_html if participant_id == user.id else message_receiver_html,
+                        'separator_html': separator_html,
                     }
                 }
             )

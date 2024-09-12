@@ -29,7 +29,7 @@
     <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom"
          hx-indicator="#message-spinner">
     <div id="message-list-container">
-    <ul class="list-unstyled" id="message-list">
+    <ul class="list-unstyled mb-1" id="message-list">
 {% endif %}
 
 {% if page and not page.has_next %}
@@ -37,6 +37,11 @@
 {% endif %}
 
 {% for message in page reversed %}
+    {# if the message is the first of its time group, add a time notice #}
+    {% if message.first_of_group %}
+        {% include 'discussion/datetime_separator.html' with formatted_datetime=message.formatted_datetime %}
+    {% endif %}
+
     <li
             {% if forloop.first and page.has_next %}
                 hx-trigger="intersect once"

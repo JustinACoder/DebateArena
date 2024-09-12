@@ -40,7 +40,7 @@
         }
 
         @supports (field-sizing: content) {
-            #current-chat, #message-form  .flex-grow-1:has(> textarea) {
+            #current-chat, #message-form .flex-grow-1:has(> textarea) {
                 min-width: 0;
             }
 
@@ -49,35 +49,87 @@
                 max-height: min(400px, 30vh);
             }
         }
-        
+
         @container (min-width: 576px) {
             .container-relative {
                 max-width: 540px !important;
             }
         }
-        
+
         @container (min-width: 768px) {
             .container-relative {
                 max-width: 720px !important;
             }
         }
-        
+
         @container (min-width: 992px) {
             .container-relative {
                 max-width: 960px !important;
             }
         }
-        
+
         @container (min-width: 1200px) {
             .container-relative {
                 max-width: 1140px !important;
             }
         }
-        
+
         @container (min-width: 1400px) {
             .container-relative {
                 max-width: 1320px !important;
             }
+        }
+
+        .message-text {
+            max-width: min(75%, 650px);
+            border-radius: 24px;
+            padding: 8px 12px;
+        }
+
+        .message-right > .message-text {
+            background-color: dodgerblue;
+            color: white;
+        }
+
+        .message-left > .message-text {
+            background-color: whitesmoke;
+            color: black;
+        }
+
+        .message-text {
+            margin-bottom: 0.5rem; /* m-2 */
+        }
+
+        .message-left {
+            justify-content: start;
+        }
+
+        .message-right {
+            justify-content: end;
+        }
+
+        /* if the message is on the right and the next message is also on the right */
+        #message-list li:has( .message-right):has(+ li .message-right) .message-text {
+            border-bottom-right-radius: 4px;
+            margin-bottom: 1px;
+        }
+
+        /* if the message is on the left and the next message is also on the left */
+        #message-list li:has( .message-left):has(+ li .message-left) .message-text {
+            border-bottom-left-radius: 4px;
+            margin-bottom: 1px;
+        }
+
+        /* if the message is on the right and the previous message is also on the right */
+        #message-list li:has( .message-right) + li .message-right .message-text {
+            border-top-right-radius: 4px;
+            margin-top: 1px;
+        }
+
+        /* if the message is on the left and the previous message is also on the left */
+        #message-list li:has( .message-left) + li .message-left .message-text {
+            border-top-left-radius: 4px;
+            margin-top: 1px;
         }
     </style>
 {% endblock %}
@@ -100,6 +152,16 @@
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         websocketManager.add_handler('message', 'new_message', handle_new_message);
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
+        
+        function set_current_discussion(discussionId) {
+            currentDiscussionId = discussionId;
+            
+            // clear the active class from all discussions
+            chatList.find('.active').removeClass('active');
+            
+            // add the active class to the current discussion
+            $('#discussion-' + discussionId).addClass('active');
+        }
 
         function handle_new_message(data) {
             updateMostRecent(data['discussion_id'], data['message']);
@@ -108,10 +170,15 @@
                 return;
             }
 
+            let messageList = $('#message-list');
+            
+            // if there is a time separator, add it
+            messageList.append($(data['separator_html']));
+            
             {# TODO: should we set the datetime using the server time which would be sent in the message? #}
             // Add message to chat history
             let element = $(`<li>${data['html']}</li>`);
-            $('#message-list').append(element);
+            messageList.append(element);
         }
 
         function handle_new_discussion(data) {
@@ -155,12 +222,11 @@
             chatList.prepend(discussion);
         }
 
-
         function setup_chat(element) {
             let form = element.find('#message-form');
             let textarea = form.find('textarea');
             let discussionId = parseInt(form.find('input[name="discussion_id"]').val());
-            currentDiscussionId = discussionId;
+            set_current_discussion(discussionId);
 
             // form listener
             form.submit(function (event) {
