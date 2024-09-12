@@ -4,8 +4,9 @@ from django.db import models
 from django.db.models import Count, Case, When, Window, Max, Q
 from django.template.defaultfilters import slugify
 from django.db.models import F, Func, Value, StdDev
-from django.db.models.functions import Coalesce, Log, Greatest, Now, Abs
+from django.db.models.functions import Coalesce, Log, Greatest, Now, Abs, Cast
 from voting.models import Vote
+from datetime import timedelta
 
 
 class DebateManager(models.Manager):
@@ -20,17 +21,14 @@ class DebateManager(models.Manager):
         We will keep it simple for now and order by the ratio of votes between now and the maximum between -48 hours
         and the debate's creation date. Then, we multiply by the log2 of the number of votes to give more weight to debates
         with more votes.
-
-        Note: we are using SQLite, so our options are limited
         """
         # Get the maximum between -48 hours and the debate's creation date
-        # TODO: in production with PostgreSQL, we might need modify this a bit
-        past_date = Max(F('date'), Func(Value('now'), Value('-48 hours'), function='datetime'))
+        past_date = Greatest(F('date'), Now() - timedelta(hours=48))
 
         # Get the number of votes between the past date and now
         num_votes_since = Count('vote', filter=Q(vote__time_stamp__gte=past_date))
 
-        # Number of votes in total
+        # Number of votes in total/
         num_votes_total = Count('vote')
 
         # Calculate the percentage of votes in the period (+1 to avoid division by zero)
@@ -47,14 +45,7 @@ class DebateManager(models.Manager):
         The lower the standard deviation, the more controversial the debate is since it means that the stances are
         more evenly distributed.
         """
-        # TODO: simply use StdDev with PostgreSQL in production
-        #       However, for now, we will use some other random metric in the meantime
-        stddev = Abs(
-            (
-                    Count('stance', filter=Q(stance__stance=True))
-                    - Count('stance', filter=Q(stance__stance=False))
-            ) / (0.8 * Count('stance'))
-        )
+        stddev = StdDev(Cast('stance__stance', models.IntegerField()))
 
         return self.annotate(stance_stddev=stddev).order_by('stance_stddev')
 
