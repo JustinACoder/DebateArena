@@ -11,7 +11,7 @@
          hx-indicator="#chat-list-spinner">
         <ul class="list-unstyled" id="chat-list"
             hx-get="{% url 'get_discussion_page' %}" hx-trigger="load"
-            hx-on::after-swap="$(this).find('time.timeago').timeago();">
+            hx-on::after-swap="$(this).find('time.timeago').timeago(); update_current_discussion();">
         </ul>
         {% include 'common/spinner.html' with id='chat-list-spinner' %}
     </div>

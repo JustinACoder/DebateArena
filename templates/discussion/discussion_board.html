@@ -153,14 +153,12 @@
         websocketManager.add_handler('message', 'new_message', handle_new_message);
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
         
-        function set_current_discussion(discussionId) {
-            currentDiscussionId = discussionId;
-            
+        function update_current_discussion() {
             // clear the active class from all discussions
             chatList.find('.active').removeClass('active');
             
             // add the active class to the current discussion
-            $('#discussion-' + discussionId).addClass('active');
+            $('#discussion-' + currentDiscussionId).addClass('active');
         }
 
         function handle_new_message(data) {
@@ -226,7 +224,8 @@
             let form = element.find('#message-form');
             let textarea = form.find('textarea');
             let discussionId = parseInt(form.find('input[name="discussion_id"]').val());
-            set_current_discussion(discussionId);
+            currentDiscussionId = discussionId;
+            update_current_discussion();
 
             // form listener
             form.submit(function (event) {
