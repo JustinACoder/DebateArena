@@ -38,7 +38,7 @@ class WebSocketManager {
 
     send_chat_message(discussionId, message) {
         this.socket.send(JSON.stringify({
-            'stream': 'message',
+            'stream': 'discussion',
             'payload': {
                 'event_type': 'new_message',
                 'data': {

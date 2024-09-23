@@ -9,9 +9,9 @@ from .models import Discussion, Message
 from .views import set_message_additional_fields
 
 
-class MessageConsumer(CustomBaseConsumer):
+class DiscussionConsumer(CustomBaseConsumer):
     """
-    This consumer handles the WebSocket connection for the sending and receiving of messages in discussions.
+    This consumer handles the WebSocket connection for all operations related to discussions.
     """
 
     async def receive_json(self, content, **kwargs):
@@ -45,6 +45,8 @@ class MessageConsumer(CustomBaseConsumer):
         # Process the event according to the event_type
         if event_type == 'new_message':
             await self.process_new_message(user, discussion, data)
+        elif event_type == 'read_messages':
+            await self.process_read_messages(user, discussion)
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid event_type'})
 
@@ -111,26 +113,30 @@ class MessageConsumer(CustomBaseConsumer):
                 }
             )
 
+    async def process_read_messages(self, user, discussion):
+        # Get the ReadCheckpoint for the user
+        read_checkpoint = await discussion.readcheckpoint_set.aget(user=user)
 
-class DiscussionConsumer(CustomBaseConsumer):
-    """
-    This consumer handles the WebSocket connection for CRUD operations on discussions.
+        # Update the ReadCheckpoint with the current time and latest message
+        await database_sync_to_async(read_checkpoint.read_messages)()
 
-    TODO: For now, this consumer is completely empty. However, once we implement the logic for creating, updating,
-        and deleting discussions, this class will make more sense. Or maybe do we want to merge this with the
-        MessageConsumer that would handle all the CRUD operations for discussions AND messages?
-    """
+        # Send the updated ReadCheckpoint information to BOTH participants
+        participants_ids = [discussion.participant1_id, discussion.participant2_id]
+        for participant_id in participants_ids:
+            user_group_name = get_user_group_name(self.__class__.__name__, participant_id)
+            is_current_user = participant_id == user.id
+            await self.channel_layer.group_send(
+                user_group_name,
+                {
+                    'status': 'success',
+                    'event_type': 'read_messages',
+                    'type': 'send.json',
+                    'data': {
+                        'discussion_id': discussion.id,
+                        'latest_message_read_id': read_checkpoint.latest_message_read_id,
+                        'is_current_user': is_current_user,
+                    }
+                }
+            )
 
-    async def receive_json(self, content, **kwargs):
-        """
-        Receives a JSON message from the client and processes it.
-        Note: all the data here is untrusted, so we should validate it before processing it.
 
-        :param content: The JSON message from the client
-        :param kwargs: Additional arguments
-        """
-        # For now, the clients cant send any messages to this consumer
-        # This is because the discussion are created by the server once a discussion request is filled
-        # Therefore, it wouldnt make sense for the client to create a discussion by sending a message here
-        # However, if we decide to allow clients to modify, delete discussions, we will add the logic here
-        pass

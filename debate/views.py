@@ -209,6 +209,9 @@ def request_discussion(request, debate_slug):
             participant2=participant2
         )
 
+        # Create ReadCheckpoints for both participants of the discussion
+        discussion_instance.create_read_checkpoints()
+
         # If any of the participants is online, we will add the discussion to their list of discussions live
         discussion_instance.add_discussion_to_participants_list_live()
 

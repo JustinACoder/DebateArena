@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 
 from django.core.paginator import Paginator
 from django.db.models import Q, F, BooleanField, When, Case, Value, Max, Window, ExpressionWrapper, DurationField, \
-    CharField, DateTimeField
+    CharField, DateTimeField, Subquery, OuterRef, Prefetch
 from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Greatest, TruncTime, ExtractYear, Now, ExtractMonth, ExtractDay, Concat
 from django.db.models.functions.window import Lag
@@ -56,18 +56,16 @@ def get_most_recent_discussions_queryset(user):
     :param user: User instance
     :return: Queryset of discussions with the most recent datetime
     """
-    # TODO: denormalize the db by adding a latest_message one-to-one field to Discussion for large scale
-    # OR even better, we can create a composite index on (discussion_id, created_at) for the message table
-    # and then use a subquery to get the latest message for each discussion
-    # This would result in a simpler, highly optimized query that works very well with the ORM
+    latest_message = Message.objects.filter(discussion=OuterRef('pk')).order_by('-created_at')[:1]
+
     return Discussion.objects.annotate(
-        latest_message_date=Max('message__created_at'),  # Using reverse relation from Discussion to Message
-        latest_message_text=Max('message__text'),
-        latest_message_author=Max('message__author__username'),
+        latest_message_text=Subquery(latest_message.values('text')),
+        latest_message_created_at=Subquery(latest_message.values('created_at')),
+        latest_message_author=Subquery(latest_message.values('author__username')),
     ).annotate(
         recent_date=Greatest(
             'created_at',
-            F('latest_message_date')  # Handling null cases directly with Greatest
+            F('latest_message_created_at')
         )
     ).filter(
         Q(participant1=user) | Q(participant2=user)

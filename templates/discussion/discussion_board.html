@@ -150,7 +150,7 @@
 
         /* WebSocket chat */
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
-        websocketManager.add_handler('message', 'new_message', handle_new_message);
+        websocketManager.add_handler('discussion', 'new_message', handle_new_message);
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
         
         function update_current_discussion() {
