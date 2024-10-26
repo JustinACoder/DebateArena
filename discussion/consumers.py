@@ -114,11 +114,18 @@ class DiscussionConsumer(CustomBaseConsumer):
             )
 
     async def process_read_messages(self, user, discussion):
+        # TODO: there could be a bug where the user reads the messages, but the other user sends a message before the
+        #  read checkpoint is updated. This would mark the message as read even though the user hasn't read it.
+
         # Get the ReadCheckpoint for the user
         read_checkpoint = await discussion.readcheckpoint_set.aget(user=user)
 
         # Update the ReadCheckpoint with the current time and latest message
-        await database_sync_to_async(read_checkpoint.read_messages)()
+        has_changed = await database_sync_to_async(read_checkpoint.read_messages)()
+
+        # If it hasnt changed, we don't need to send the updated ReadCheckpoint information
+        if not has_changed:
+            return
 
         # Send the updated ReadCheckpoint information to BOTH participants
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
@@ -133,7 +140,6 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': discussion.id,
-                        'latest_message_read_id': read_checkpoint.latest_message_read_id,
                         'is_current_user': is_current_user,
                     }
                 }

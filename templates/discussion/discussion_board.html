@@ -131,6 +131,21 @@
             border-top-left-radius: 4px;
             margin-top: 1px;
         }
+        
+        /* If the read notice is right below a message or if it is the last message, remove the margin */
+        #message-list li:has(+ li#read-notice) .message-text, #message-list li:last-of-type .message-text {
+            margin-bottom: 0 !important;
+        }
+
+        /* When a discussion is unread, add a small blue border than "moves around" */
+        .unread .discussion-title {
+            font-weight: bold !important;
+        }
+
+        .unread .latest-message {
+            font-weight: bold;
+            color: var(--bs-dark) !important;
+        }
     </style>
 {% endblock %}
 
@@ -152,13 +167,17 @@
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         websocketManager.add_handler('discussion', 'new_message', handle_new_message);
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
-        
+        websocketManager.add_handler('discussion', 'read_messages', handle_read_messages);
+
         function update_current_discussion() {
             // clear the active class from all discussions
             chatList.find('.active').removeClass('active');
-            
+
             // add the active class to the current discussion
             $('#discussion-' + currentDiscussionId).addClass('active');
+            
+            // Tell server to indicate that the messages are read
+            websocketManager.read_messages(currentDiscussionId);
         }
 
         function handle_new_message(data) {
@@ -169,14 +188,28 @@
             }
 
             let messageList = $('#message-list');
-            
+
+            // determine if we should scroll to the bottom after adding the message
+            // if the user is currently at no more than 100px from the bottom, scroll to the bottom
+            let shouldScroll = messageList[0].scrollHeight - messageList.scrollTop() - messageList.outerHeight() <= 100;
+
             // if there is a time separator, add it
             messageList.append($(data['separator_html']));
-            
+
             {# TODO: should we set the datetime using the server time which would be sent in the message? #}
             // Add message to chat history
             let element = $(`<li>${data['html']}</li>`);
             messageList.append(element);
+
+            // if the user was at the bottom, scroll to the bottom
+            if (shouldScroll) {
+                messageList.scrollTop(messageList[0].scrollHeight);
+            }
+            
+            // Tell server to indicate that the messages are read
+            {# TODO: in the future, maybe we would want to only mark the messages as read once they enter the viewport #}
+            {# TODO: there is probably some kind of optimization possible here so that we dont send a ws for every message only to read the messages #}
+            websocketManager.read_messages(currentDiscussionId);
         }
 
         function handle_new_discussion(data) {
@@ -189,6 +222,27 @@
 
             // Prepend the new chat to the chat list
             element.hide().prependTo(chatList).slideDown();
+        }
+
+        function handle_read_messages(data) {
+            let discussionId = data['discussion_id'];
+            let isCurrentUser = data['is_current_user'];
+            let relatedDiscussion = $('#discussion-' + discussionId);
+
+            // if it comes from the current user, remove the unread class
+            if (isCurrentUser) {
+                relatedDiscussion.removeClass('unread');
+                return;
+            }
+
+            // if it comes from the other user, and we are in the discussion, update the read notice
+            if (discussionId === currentDiscussionId) {
+                // Move the read notice
+                let readNotice = $('#read-notice').removeClass('d-none');
+                readNotice.slideUp(100, function () {
+                    readNotice.appendTo('#message-list').slideDown(100);
+                });
+            }
         }
 
         function updateMostRecent(discussionId, message) {
@@ -210,6 +264,11 @@
             // let latestMessageSpan = $(`#latest-message-${discussionId}`); // commented out as this lags the IDE for some reason
             let latestMessageSpan = $('#latest-message-' + discussionId);
             latestMessageSpan.text(message);
+
+            // if its not the current discussion, add the unread class to the discussion
+            if (discussionId !== currentDiscussionId) {
+                relatedDiscussion.addClass('unread');
+            }
 
             // Update the time of the latest message
             let latestMessageTime = $('#latest-message-time-' + discussionId);

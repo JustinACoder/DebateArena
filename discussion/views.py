@@ -11,7 +11,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from ProjectOpenDebate.common.decorators import login_required_htmx
 from debate.models import Debate
 from discussion.forms import MessageForm
-from discussion.models import Discussion, Message
+from discussion.models import Discussion, Message, ReadCheckpoint
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
 
 
@@ -56,7 +56,9 @@ def get_most_recent_discussions_queryset(user):
     :param user: User instance
     :return: Queryset of discussions with the most recent datetime
     """
+    # Both of the subqueries should be fast since they are indexed
     latest_message = Message.objects.filter(discussion=OuterRef('pk')).order_by('-created_at')[:1]
+    readcheckpoint = ReadCheckpoint.objects.filter(discussion=OuterRef('pk'), user=user)[:1]
 
     return Discussion.objects.annotate(
         latest_message_text=Subquery(latest_message.values('text')),
@@ -66,7 +68,18 @@ def get_most_recent_discussions_queryset(user):
         recent_date=Greatest(
             'created_at',
             F('latest_message_created_at')
-        )
+        ),
+        # Check if the latest message is the same message pointed by the current user's readcheckpoint for the discussion
+        has_unread_messages=Case(
+            When(
+                latest_message_created_at__gt=Subquery(
+                    readcheckpoint.values('last_message_read__created_at')
+                ),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
     ).filter(
         Q(participant1=user) | Q(participant2=user)
     ).select_related('debate').order_by('-recent_date')
@@ -116,8 +129,12 @@ def get_current_chat_page(request, discussion_id):
     discussion_instance = get_object_or_404(
         Discussion.objects  # TODO: should we return 403 if the user is not a participant?
         .filter(Q(participant1=request.user) | Q(participant2=request.user))
-        .prefetch_related('message_set')
+        .prefetch_related('message_set', 'readcheckpoint_set')
         .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
+
+    # Get the read checkpoint for the other user (we want to see which messages they have read)
+    # We don't have to check for None since it is guaranteed that there is a read checkpoint for the other user
+    read_checkpoint = discussion_instance.readcheckpoint_set.exclude(user=request.user).first()
 
     # Get the messages
     messages = discussion_instance.message_set.order_by('-created_at').annotate(
@@ -148,7 +165,13 @@ def get_current_chat_page(request, discussion_id):
     #       This logic is also weirdly replicated in the consumer
     set_message_additional_fields(*page.object_list)
 
-    return render(request, 'discussion/current_chat_page.html', {'page': page, 'discussion': discussion_instance})
+    context = {
+        'page': page,
+        'discussion': discussion_instance,
+        'read_checkpoint': read_checkpoint,
+    }
+
+    return render(request, 'discussion/current_chat_page.html', context)
 
 
 @login_required_htmx

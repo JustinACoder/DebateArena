@@ -115,14 +115,28 @@ class ReadCheckpoint(models.Model):
 
     class Meta:
         unique_together = ('discussion', 'user')
+        indexes = [
+            # To quickly get the checkpoint for a user in a discussion
+            models.Index(fields=['discussion', 'user']),
+        ]
 
     def read_messages(self):
         """
         Update the ReadCheckpoint to indicate that the user has read the latest messages.
+
+        :return: True if the ReadCheckpoint was updated, False if it was already up-to-date
         """
+        # Get old current last_message_read id
+        old_last_message_read_id = self.last_message_read_id
+
+        # Update the ReadCheckpoint with the current time and latest message
         self.last_message_read = self.discussion.message_set.order_by('-created_at').first()
         self.read_at = datetime.now()
         self.save()
+
+        # Return whether the ReadCheckpoint was updated
+        return old_last_message_read_id != self.last_message_read_id
+
 
     def __str__(self):
         return f"ReadCheckpoint for {self.user} in discussion on \"{self.discussion.debate.title}\""

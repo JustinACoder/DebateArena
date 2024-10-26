@@ -29,7 +29,7 @@
     <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom"
          hx-indicator="#message-spinner">
     <div id="message-list-container">
-    <ul class="list-unstyled mb-1" id="message-list">
+    <ul class="list-unstyled mb-2" id="message-list">
 {% endif %}
 
 {% if page and not page.has_next %}
@@ -51,7 +51,14 @@
             {% endif %}>
         {% include 'discussion/message.html' with message=message is_current_user=message.is_current_user %}
     </li>
+
+    {# if the message is the last read by the other user, add a read notice #}
+    {% if read_checkpoint.last_message_read_id == message.id %}
+        {% include 'discussion/read_notice.html' %}
+    {% endif %}
 {% empty %}
+    {# still include the read notice but hide it, this will allow it to move around once messages are added #}
+    {% include 'discussion/read_notice.html' with hidden=True %}
     <li class="text-center text-muted my-2">No messages yet</li>
 {% endfor %}
 

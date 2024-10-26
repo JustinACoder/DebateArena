@@ -5,14 +5,14 @@
    id="discussion-{{ discussion.id }}"
    data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas"
    aria-controls="chat-list-canvas"
-   class="btn btn-light border-0 w-100 text-start"
+   class="btn btn-light border-0 w-100 text-start {{ has_unread|yesno:'unread,' }}"
    hx-get="{% url 'get_current_chat_page' discussion.id %}"
    hx-target="#current-chat-content"
    hx-push-url="{% url 'specific_discussion' discussion.id %}"
    hx-indicator="#current-chat-spinner"
    hx-on::before-request="$('#current-chat-content').empty();"
    hx-on::after-request="setup_chat($('#current-chat'))">
-    <strong>{{ discussion.debate.title }}</strong><br>
+    <div class="discussion-title">{{ discussion.debate.title }}</div>
     <div>with <span class="fst-italic"> 
             {% if request.user == discussion.participant1 %}
                 {{ discussion.participant2.username }}
