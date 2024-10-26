@@ -23,7 +23,7 @@
     </div>
     <div class="row">
         <span id="latest-message-{{ discussion.id }}"
-              class="fst-italic text-secondary small col text-truncate pe-1">{{ discussion.latest_message_text|default_if_none:'No message yet'|truncatechars:75 }}</span>
+              class="fst-italic text-secondary small col text-truncate pe-1 latest-message">{{ discussion.latest_message_text|default:'No message yet'|truncatechars:75 }}</span>
         {# TODO: determine the timezone based on the user/device #}
         <time class="timeago text-secondary small col-auto me-auto ps-0"
               id="latest-message-time-{{ discussion.id }}"
