@@ -169,21 +169,29 @@
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
         websocketManager.add_handler('discussion', 'read_messages', handle_read_messages);
 
+        function update_read_notice(instant = false) {
+            let delay = instant ? 0 : 100;
+            let readNotice = $('#read-notice');
+            readNotice.slideUp(delay, function () {
+                readNotice.appendTo('#message-list').slideDown(delay);
+            });
+        }
+        
         function update_current_discussion() {
             // clear the active class from all discussions
             chatList.find('.active').removeClass('active');
 
             // add the active class to the current discussion
             $('#discussion-' + currentDiscussionId).addClass('active');
-            
-            // Tell server to indicate that the messages are read
-            websocketManager.read_messages(currentDiscussionId);
         }
 
         function handle_new_message(data) {
-            updateMostRecent(data['discussion_id'], data['message']);
+            updateMostRecent(data['discussion_id'], data['message'], data['is_current_user_sender']);
 
             if (data['discussion_id'] !== currentDiscussionId) {
+                // if the message is not from the current discussion, add 1 to the unread message badge
+                // the function will only add 1 if the message is not from the current user
+                handleNewMessageUpdateBadge(data);  {# defined in base.html #}
                 return;
             }
 
@@ -206,10 +214,14 @@
                 messageList.scrollTop(messageList[0].scrollHeight);
             }
             
-            // Tell server to indicate that the messages are read
+            // If the message comes from the other user, tell the server that we have read the messages
+            // we will also directly mark that the sender has seen his own message
             {# TODO: in the future, maybe we would want to only mark the messages as read once they enter the viewport #}
             {# TODO: there is probably some kind of optimization possible here so that we dont send a ws for every message only to read the messages #}
-            websocketManager.read_messages(currentDiscussionId);
+            if (!data['is_current_user_sender']) {
+                update_read_notice(true); // make it instant to avoid delayed visual when inserting a new message
+                websocketManager.read_messages(currentDiscussionId);
+            }
         }
 
         function handle_new_discussion(data) {
@@ -230,22 +242,26 @@
             let relatedDiscussion = $('#discussion-' + discussionId);
 
             // if it comes from the current user, remove the unread class
+            {# This is needed if a user has two windows open on two different conversations #}
+            {# Indeed, in this case, if the user view the message in one window, it should mark it as read in the other #}
             if (isCurrentUser) {
                 relatedDiscussion.removeClass('unread');
+                
+                // if we are not in the discussion read, update the badge
+                // there is an exception if the read is due to the user first opening the discussion
+                if (discussionId !== currentDiscussionId && !data['through_load_discussion']) {
+                    handleMessageReadBadge(data);  {# defined in base.html #}
+                }
                 return;
             }
 
-            // if it comes from the other user, and we are in the discussion, update the read notice
+            // if it comes from the other user and we are in the discussion, update the read notice
             if (discussionId === currentDiscussionId) {
-                // Move the read notice
-                let readNotice = $('#read-notice').removeClass('d-none');
-                readNotice.slideUp(100, function () {
-                    readNotice.appendTo('#message-list').slideDown(100);
-                });
+                update_read_notice();
             }
         }
 
-        function updateMostRecent(discussionId, message) {
+        function updateMostRecent(discussionId, message, is_current_user_sender) {
             let relatedDiscussion = $('#discussion-' + discussionId);
 
             // If the discussion is not in the chat list, fetch it
@@ -265,8 +281,8 @@
             let latestMessageSpan = $('#latest-message-' + discussionId);
             latestMessageSpan.text(message);
 
-            // if its not the current discussion, add the unread class to the discussion
-            if (discussionId !== currentDiscussionId) {
+            // if its not the current discussion and we arent the sender, add the unread class to the discussion
+            if (discussionId !== currentDiscussionId && !is_current_user_sender) {
                 relatedDiscussion.addClass('unread');
             }
 
@@ -285,6 +301,9 @@
             let discussionId = parseInt(form.find('input[name="discussion_id"]').val());
             currentDiscussionId = discussionId;
             update_current_discussion();
+            
+            // Tell server to indicate that the messages are read
+            websocketManager.read_messages(currentDiscussionId, true);
 
             // form listener
             form.submit(function (event) {

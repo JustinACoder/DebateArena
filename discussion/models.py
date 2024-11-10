@@ -124,19 +124,29 @@ class ReadCheckpoint(models.Model):
         """
         Update the ReadCheckpoint to indicate that the user has read the latest messages.
 
-        :return: True if the ReadCheckpoint was updated, False if it was already up-to-date
+        :return: The number of messages that were read
         """
-        # Get old current last_message_read id
-        old_last_message_read_id = self.last_message_read_id
+        # Get the new last_message_read_id along with the number of messages that were read
+        unread_messages = self.discussion.message_set.filter(created_at__gt=self.last_message_read.created_at)
+        num_messages_read = unread_messages.count()
 
-        # Update the ReadCheckpoint with the current time and latest message
-        self.last_message_read = self.discussion.message_set.order_by('-created_at').first()
+        if num_messages_read == 0:
+            return 0
+
+        # Update the ReadCheckpoint
+        self.read_until(unread_messages.order_by('-created_at').first())
+
+        return num_messages_read
+
+    def read_until(self, message):
+        """
+        Set the message as the latest message read by the user.
+
+        :param message: Message
+        """
+        self.last_message_read = message
         self.read_at = datetime.now()
         self.save()
-
-        # Return whether the ReadCheckpoint was updated
-        return old_last_message_read_id != self.last_message_read_id
-
 
     def __str__(self):
         return f"ReadCheckpoint for {self.user} in discussion on \"{self.discussion.debate.title}\""

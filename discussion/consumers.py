@@ -46,7 +46,7 @@ class DiscussionConsumer(CustomBaseConsumer):
         if event_type == 'new_message':
             await self.process_new_message(user, discussion, data)
         elif event_type == 'read_messages':
-            await self.process_read_messages(user, discussion)
+            await self.process_read_messages(user, discussion, data)
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid event_type'})
 
@@ -66,6 +66,10 @@ class DiscussionConsumer(CustomBaseConsumer):
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid message'})
             return
+
+        # mark this message's discussion's read checkpoint as read until this message
+        user_readcheckpoint = await discussion.readcheckpoint_set.aget(user=user)
+        await database_sync_to_async(user_readcheckpoint.read_until)(message_instance)
 
         # Set additional fields for the message
         # TODO: This is a bit hacky, we should find a better way to do this
@@ -109,11 +113,12 @@ class DiscussionConsumer(CustomBaseConsumer):
                         'message': message,
                         'html': message_sender_html if participant_id == user.id else message_receiver_html,
                         'separator_html': separator_html,
+                        'is_current_user_sender': participant_id == user.id,
                     }
                 }
             )
 
-    async def process_read_messages(self, user, discussion):
+    async def process_read_messages(self, user, discussion, data):
         # TODO: there could be a bug where the user reads the messages, but the other user sends a message before the
         #  read checkpoint is updated. This would mark the message as read even though the user hasn't read it.
 
@@ -121,10 +126,10 @@ class DiscussionConsumer(CustomBaseConsumer):
         read_checkpoint = await discussion.readcheckpoint_set.aget(user=user)
 
         # Update the ReadCheckpoint with the current time and latest message
-        has_changed = await database_sync_to_async(read_checkpoint.read_messages)()
+        num_messages_read = await database_sync_to_async(read_checkpoint.read_messages)()
 
-        # If it hasnt changed, we don't need to send the updated ReadCheckpoint information
-        if not has_changed:
+        # If no new messages were read, no need to send the updated ReadCheckpoint information
+        if num_messages_read == 0:
             return
 
         # Send the updated ReadCheckpoint information to BOTH participants
@@ -141,6 +146,8 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'data': {
                         'discussion_id': discussion.id,
                         'is_current_user': is_current_user,
+                        'num_messages_read': num_messages_read,  # used to update the unread messages count in navbar
+                        'through_load_discussion': data['through_load_discussion']
                     }
                 }
             )

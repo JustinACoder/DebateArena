@@ -70,7 +70,6 @@
         }
 
         .nav-icon {
-            font-size: 2rem;
             line-height: 0;
             display: grid;
             color: inherit;
@@ -79,9 +78,13 @@
             height: 100%;
         }
 
+        .nav-icon > i.bi {
+            font-size: 24px;
+        }
+
         .nav-item-icon {
-            height: 100%;
             width: 40px;
+            aspect-ratio: 1/1;
             border-radius: 50%;
             background: lightgray;
         }
@@ -163,8 +166,22 @@
         <!-- Right Side -->
         <div class="order-sm-0 hstack column-gap-2 order-1 order-sm-2">
             {% if user.is_authenticated %}
+                <div class="nav-item-icon position-relative">
+                    <a class="nav-icon"
+                       href="{% url 'discussion_default' %}" role="button"
+                       data-is-current="{% if request.resolver_match.url_name == 'specific_discussion' %}true{% else %}false{% endif %}"
+                       id="messages-icon">
+                        <i class="bi bi-chat-fill"></i>
+                        <span class="position-absolute translate-middle badge bg-danger border border-light rounded-circle{% if request.user.num_unread_messages == 0 %} d-none{% endif %}"
+                              id="messages-badge"
+                              style="top: calc(50% * (1 - cos(45deg))); left: calc(50% * (1 + cos(45deg)));">
+                            {{ request.user.num_unread_messages }} {# TODO: clip to 99+ using custom filter? #}
+                            <span class="visually-hidden">Unread Message(s)</span>
+                        </span>
+                    </a>
+                </div>
                 <div class="dropdown nav-item-icon dropdown-redirect-below-md">
-                    <a class="nav-icon fs-4"
+                    <a class="nav-icon"
                        href="{% url 'list_notifications' %}" role="button"
                        data-is-current="{% if request.resolver_match.url_name == 'list_notifications' %}true{% else %}false{% endif %}"
                        id="notification-dropdown-icon"
@@ -172,7 +189,7 @@
                        data-bs-auto-close="outside"
                        aria-expanded="false">
                         <i class="bi bi-bell-fill"></i>
-                        <span class="position-absolute translate-middle p-2 bg-danger border border-light rounded-circle{% if request.user.num_unread_notifications == 0 %} d-none{% endif %}"
+                        <span class="position-absolute translate-middle badge bg-danger border border-light rounded-circle{% if request.user.num_unread_notifications == 0 %} d-none{% endif %}"
                               id="notification-badge"
                               style="top: calc(50% * (1 - cos(45deg))); left: calc(50% * (1 + cos(45deg)));">
                             <span class="visually-hidden">Unread Notification(s)</span>
@@ -186,7 +203,7 @@
                     <a class="nav-icon" href="#" role="button" id="account-dropdown" data-bs-toggle="dropdown"
                        aria-expanded="false"
                        data-bs-auto-close="outside">
-                        <i class="bi bi-person-circle"></i>
+                        <i class="bi bi-person-circle" style="font-size: 34px !important"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end bg-light" style="width: min(300px, 100vw)"
                         aria-labelledby="account-dropdown">
@@ -290,14 +307,15 @@
         }
     });
     {% if user.is_authenticated %}
+        /********** Notifications **********/
         const notificationList = $('#notification-list');
         const notificationBadge = $('#notification-badge');
         const notificationDropdownIcon = $('#notification-dropdown-icon');
-        let numberUnread = {{ request.user.num_unread_notifications }};
+        let numberNotifsUnread = {{ request.user.num_unread_notifications }};
         
         function updateNumberUnread(increment) {
-            numberUnread += increment;
-            if (numberUnread === 0) {
+            numberNotifsUnread += increment;
+            if (numberNotifsUnread === 0) {
                 notificationBadge.addClass('d-none');
             }else {
                 notificationBadge.removeClass('d-none');
@@ -338,7 +356,7 @@
             {% endif %}
         }
 
-        function handleSetRead(data) {
+        function handleNotificationSetRead(data) {
             let notificationId = data.notification_id;
             let isUnread = !data.is_read;
             let notification = $('.notification[data-notification-id="' + notificationId + '"]');
@@ -375,8 +393,51 @@
         }
 
         websocketManager.add_handler('notification', 'new_notification', handleNewNotification);
-        websocketManager.add_handler('notification', 'set_read', handleSetRead);
+        websocketManager.add_handler('notification', 'set_read', handleNotificationSetRead);
+        
+        /************** Messages **************/
+        const messagesBadge = $('#messages-badge');
+        let numUnreadMessages = {{ request.user.num_unread_messages }};
 
+        function handleMessageReadBadge(data) {
+            {# If the read update is not for the current user, we don't need to do anything #}
+            {# For instance, this would happen when another user with which the current user has a conversation with #}
+            {# reads a message in any of their conversations #}
+            if (!data.is_current_user) {
+                return;
+            }
+
+            // get the new number of unread messages
+            numUnreadMessages -= data.num_messages_read;
+
+            // Update the number of unread messages
+            if (numUnreadMessages === 0) {
+                messagesBadge.addClass('d-none');
+            }else {
+                messagesBadge.removeClass('d-none');
+            }
+            messagesBadge.text(numUnreadMessages);
+        }
+
+        function handleNewMessageUpdateBadge(data) {
+            if (data.is_current_user_sender) {
+                return;
+            }
+
+            numUnreadMessages += 1;
+            messagesBadge.removeClass('d-none');
+            messagesBadge.text(numUnreadMessages);
+        }
+
+        {# Do not include this handler if we are in the discussion page #}
+        {# This is because the new message handler in the discussion page will take care of updating the number #}
+        {# of unread messages and we don't want to double count the messages #}
+        {% if request.resolver_match.url_name != 'specific_discussion' %}
+            websocketManager.add_handler('discussion', 'new_message', handleNewMessageUpdateBadge);
+            websocketManager.add_handler('discussion', 'read_messages', handleMessageReadBadge);
+        {% endif %}
+            
+        /********** Initialize **********/
         $(document).ready(function () {
             // Redirect to the notifications page if the page is too small for the dropdown
             if (window.innerWidth < 768) {

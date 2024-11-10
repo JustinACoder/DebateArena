@@ -36,7 +36,12 @@ class WebSocketManager {
 
     add_handler(stream, event_type, handler) {
         let handler_key = stream + '.' + event_type;
-        this.handlers[handler_key] = handler;
+        let handlers_for_key = this.handlers[handler_key];
+        if (handlers_for_key) {
+            handlers_for_key.push(handler);
+        } else {
+            this.handlers[handler_key] = [handler];
+        }
     }
 
     on_message(event) {
@@ -50,8 +55,10 @@ class WebSocketManager {
 
         let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
         if (handler_key in this.handlers) {
-            let handler = this.handlers[handler_key];
-            handler(payload['data']);
+            let handlers_for_key = this.handlers[handler_key];
+            for (let handler of handlers_for_key) {
+                handler(payload['data']);
+            }
         } else {
             console.log(`No handler for ${handler_key}, the available handlers are: ${Object.keys(this.handlers)}`);
         }
@@ -93,13 +100,14 @@ class WebSocketManager {
         });
     }
 
-    read_messages(currentDiscussionId) {
+    read_messages(currentDiscussionId, through_load_discussion = false) {
         this.send({
             'stream': 'discussion',
             'payload': {
                 'event_type': 'read_messages',
                 'data': {
-                    'discussion_id': currentDiscussionId
+                    'discussion_id': currentDiscussionId,
+                    'through_load_discussion': through_load_discussion
                 }
             }
         });

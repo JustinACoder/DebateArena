@@ -76,6 +76,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'notifications.middleware.NotificationMiddleware',
+    'discussion.middleware.MessageMiddleware'
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
@@ -154,6 +155,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # In addition to the default static files directory (one in each app), we also have a global static files directory
 # This directory is used for global static files, such as CSS files that are used across multiple apps
