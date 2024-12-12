@@ -34,6 +34,8 @@ class Discussion(models.Model):
                                      related_name='p1_discussion_set')
     participant2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                                      related_name='p2_discussion_set')
+    is_archived_for_p1 = models.BooleanField(default=False)
+    is_archived_for_p2 = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def create_read_checkpoints(self):
@@ -70,6 +72,14 @@ class Discussion(models.Model):
                     }
                 }
             )
+
+    def is_archived_for(self, user):
+        if user == self.participant1:
+            return self.is_archived_for_p1
+        elif user == self.participant2:
+            return self.is_archived_for_p2
+        else:
+            raise ValueError("User is not a participant in the discussion")
 
     def __str__(self):
         return f"Discussion between {self.participant1} and {self.participant2} on \"{self.debate.title}\""

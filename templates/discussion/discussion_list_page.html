@@ -4,7 +4,7 @@
     <li
             {% if forloop.last and page.has_next %}
                 hx-trigger="intersect once"
-                hx-get="{% url 'get_discussion_page' %}?page={{ page.next_page_number }}"
+                hx-get="{% url 'get_discussion_page' %}?page={{ page.next_page_number }}&tab={{ tab }}"
                 hx-swap="afterend"
             {% endif %}>
         {% include 'discussion/discussion.html' with discussion=discussion %}

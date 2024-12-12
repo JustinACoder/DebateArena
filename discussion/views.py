@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models.functions import Greatest, TruncTime, ExtractYear, Now, ExtractMonth, ExtractDay, Concat
 from django.db.models.functions.window import Lag
 from django.shortcuts import render, get_object_or_404, redirect
+from django.views.decorators.http import require_POST
 
 from ProjectOpenDebate.common.decorators import login_required_htmx
 from debate.models import Debate
@@ -48,19 +49,35 @@ def set_message_additional_fields(*messages):
             message.formatted_datetime = message.created_at.strftime('%b %d, %Y %H:%M')
 
 
-def get_most_recent_discussions_queryset(user):
+def get_most_recent_discussions_queryset(user, discussions_type='all'):
     """
     Get a queryset with the most recent discussions for the user. A discussion datetime is the maximum datetime
     between the discussion creation datetime and the most recent message datetime if the discussion has messages.
 
     :param user: User instance
+    :param discussions_type: 'all', 'active' or 'archived' to filter the discussions accordingly
     :return: Queryset of discussions with the most recent datetime
     """
     # Both of the subqueries should be fast since they are indexed
     latest_message = Message.objects.filter(discussion=OuterRef('pk')).order_by('-created_at')[:1]
     readcheckpoint = ReadCheckpoint.objects.filter(discussion=OuterRef('pk'), user=user)[:1]
 
-    return Discussion.objects.annotate(
+    # Filter the discussions based on the type
+    if discussions_type == 'active':
+        discussions_filter = ((Q(is_archived_for_p1=False) & Q(participant1=user)) |
+                              Q(is_archived_for_p2=False) & Q(participant2=user))
+    elif discussions_type == 'archived':
+        discussions_filter = ((Q(is_archived_for_p1=True) & Q(participant1=user)) |
+                              Q(is_archived_for_p2=True) & Q(participant2=user))
+    elif discussions_type == 'all':
+        discussions_filter = Q()
+    else:
+        return Discussion.objects.none()
+
+    return Discussion.objects.filter(
+        Q(participant1=user) | Q(participant2=user),
+        discussions_filter
+    ).annotate(
         latest_message_text=Subquery(latest_message.values('text')),
         latest_message_created_at=Subquery(latest_message.values('created_at')),
         latest_message_author=Subquery(latest_message.values('author__username')),
@@ -80,15 +97,13 @@ def get_most_recent_discussions_queryset(user):
             default=Value(False),
             output_field=BooleanField()
         ),
-    ).filter(
-        Q(participant1=user) | Q(participant2=user)
     ).select_related('debate').order_by('-recent_date')
 
 
 @login_required
 def discussion_default(request):
-    # Get the most recent discussion
-    most_recent_discussion = get_most_recent_discussions_queryset(request.user).first()
+    # Get the most recent active discussion
+    most_recent_discussion = get_most_recent_discussions_queryset(request.user, 'active').first()
 
     if most_recent_discussion:
         return redirect('specific_discussion', discussion_id=most_recent_discussion.id)
@@ -104,8 +119,12 @@ def specific_discussion(request, discussion_id):
             Q(participant1=request.user) | Q(participant2=request.user), pk=discussion_id).exists():
         return HttpResponseForbidden()
 
+    # Determine if the discussion is archived for the current user
+    is_archived_for_current_user = Discussion.objects.get(pk=discussion_id).is_archived_for(request.user)
+
     context = {
         'message_form': MessageForm(),
+        'is_archived_for_current_user': is_archived_for_current_user,
         'discussion_id': discussion_id
     }
 
@@ -114,13 +133,14 @@ def specific_discussion(request, discussion_id):
 
 @login_required_htmx
 def get_discussion_page(request):
-    discussions_queryset = get_most_recent_discussions_queryset(request.user)
+    discussions_tab = request.GET.get('tab', 'active').lower()
+    discussions_queryset = get_most_recent_discussions_queryset(request.user, discussions_tab)
 
     # Get the page
     paginator = Paginator(discussions_queryset, 15)
     page = paginator.get_page(request.GET.get('page', '1'))
 
-    return render(request, 'discussion/discussion_list_page.html', {'page': page})
+    return render(request, 'discussion/discussion_list_page.html', {'page': page, 'tab': discussions_tab})
 
 
 @login_required_htmx
@@ -131,6 +151,9 @@ def get_current_chat_page(request, discussion_id):
         .filter(Q(participant1=request.user) | Q(participant2=request.user))
         .prefetch_related('message_set', 'readcheckpoint_set')
         .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
+
+    # Check if the conversation should be marked as archived for the current user
+    is_archived_for_current_user = discussion_instance.is_archived_for(request.user)
 
     # Get the read checkpoint for the other user (we want to see which messages they have read)
     # We don't have to check for None since it is guaranteed that there is a read checkpoint for the other user
@@ -168,6 +191,7 @@ def get_current_chat_page(request, discussion_id):
     context = {
         'page': page,
         'discussion': discussion_instance,
+        'is_archived_for_current_user': is_archived_for_current_user,
         'read_checkpoint': read_checkpoint,
     }
 
@@ -179,10 +203,32 @@ def get_single_discussion(request):
     # Get the discussion id
     discussion_id = request.GET.get('discussion_id')
 
-    # Get the discussion
+    # Get the discussion (active or archived)
     discussion_instance = get_most_recent_discussions_queryset(request.user).filter(pk=discussion_id).first()
 
     if discussion_instance is None:
         return HttpResponseNotFound()
 
     return render(request, 'discussion/discussion.html', {'discussion': discussion_instance})
+
+
+@login_required
+@require_POST
+def set_archive_status(request, discussion_id):
+    # Get the discussion
+    discussion_instance = get_object_or_404(
+        Discussion.objects.filter(Q(participant1=request.user) | Q(participant2=request.user)), pk=discussion_id)
+
+    # Get the archive status
+    archive_status = request.POST.get('status', 'true').lower() == 'true'
+
+    # Set the archive status
+    if request.user == discussion_instance.participant1:
+        discussion_instance.is_archived_for_p1 = archive_status
+    else:
+        discussion_instance.is_archived_for_p2 = archive_status
+
+    discussion_instance.save()
+
+    # Redirect to the discussion that we have just archived
+    return redirect('specific_discussion', discussion_id=discussion_id)

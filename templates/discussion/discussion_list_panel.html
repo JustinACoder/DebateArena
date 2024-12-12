@@ -7,10 +7,31 @@
                 data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
                 aria-label="Close"></button>
     </div>
-    <div id="chat-list-div" class="overflow-y-scroll-custom vstack px-2"
+    <div id="chat-list-div" class="overflow-y-scroll-custom vstack px-2 gap-2"
          hx-indicator="#chat-list-spinner">
-        <ul class="list-unstyled" id="chat-list"
-            hx-get="{% url 'get_discussion_page' %}" hx-trigger="load"
+        <ul class="nav nav-tabs nav-justified" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{{ is_archived_for_current_user|yesno:', active' }}"
+                        role="tab" data-bs-toggle="tab" type="button"
+                        hx-get="{% url 'get_discussion_page' %}?tab=active"
+                        hx-on::before-request="$('#chat-list').empty();"
+                        hx-trigger="click{% if not is_archived_for_current_user %}, load{% endif %}"
+                        hx-target="#chat-list"
+                        hx-indicator="#chat-list-spinner">Active
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{{ is_archived_for_current_user|yesno:' active,' }}"
+                        role="tab" data-bs-toggle="tab" type="button"
+                        hx-get="{% url 'get_discussion_page' %}?tab=archived"
+                        hx-on::before-request="$('#chat-list').empty();"
+                        hx-trigger="click{% if is_archived_for_current_user %}, load{% endif %}"
+                        hx-target="#chat-list"
+                        hx-indicator="#chat-list-spinner">Archived
+                </button>
+            </li>
+        </ul>
+        <ul class="list-unstyled" id="chat-list" 
             hx-on::after-swap="$(this).find('time.timeago').timeago(); update_current_discussion();">
         </ul>
         {% include 'common/spinner.html' with id='chat-list-spinner' %}
