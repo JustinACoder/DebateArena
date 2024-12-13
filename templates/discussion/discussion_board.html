@@ -162,12 +162,17 @@
         {# TODO: make sure the websocket connection stays open for long periods of time (?) #}
         /* Switching between chats */
         const chatList = $('#chat-list');
+        let active_tab = "{{ is_archived_for_current_user|yesno:'archived,active' }}";
 
         /* WebSocket chat */
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
         websocketManager.add_handler('discussion', 'new_message', handle_new_message);
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
         websocketManager.add_handler('discussion', 'read_messages', handle_read_messages);
+
+        function set_active_tab(tab) {
+            active_tab = tab;
+        }
 
         function update_read_notice(instant = false) {
             let delay = instant ? 0 : 100;
@@ -186,11 +191,13 @@
         }
 
         function handle_new_message(data) {
-            updateMostRecent(data['discussion_id'], data['message'], data['is_current_user_sender']);
+            updateMostRecent(data['discussion_id'], data['message'], data['is_current_user_sender'], data.is_archived);
 
             if (data['discussion_id'] !== currentDiscussionId) {
-                // if the message is not from the current discussion, add 1 to the unread message badge
+                // if the message is not from the current discussion,
+                // add 1 to the unread message badge
                 // the function will only add 1 if the message is not from the current user
+                // and if the message is not from an archived discussion
                 handleNewMessageUpdateBadge(data);  {# defined in base.html #}
                 return;
             }
@@ -225,6 +232,11 @@
         }
 
         function handle_new_discussion(data) {
+            // ignore if we are in the archived tab (new dicussion are always active)
+            if (active_tab === 'archived') {
+                return;
+            }
+            
             let element = $(`<li>${data['html']}</li>`);
 
             // If the list is empty, change the notice
@@ -261,7 +273,11 @@
             }
         }
 
-        function updateMostRecent(discussionId, message, is_current_user_sender) {
+        function updateMostRecent(discussionId, message, is_current_user_sender, is_archived) {
+            if (is_archived !== (active_tab === 'archived')) {
+                return;
+            }
+            
             let relatedDiscussion = $('#discussion-' + discussionId);
 
             // If the discussion is not in the chat list, fetch it

@@ -22,7 +22,8 @@ class MessageMiddleware:
             # Query to get the count of messages that are after the checkpoint for each discussion
             unread_messages_query = (
                 Discussion.objects
-                .filter(Q(participant1=request.user) | Q(participant2=request.user))
+                .filter((Q(participant1=request.user) & Q(is_archived_for_p1=False)) |
+                        (Q(participant2=request.user) & Q(is_archived_for_p2=False)))
                 .annotate(
                     unread_count=Count(
                         'message',

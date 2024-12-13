@@ -409,7 +409,12 @@
             if (!data.is_current_user) {
                 return;
             }
-
+            
+            // ignore if the discussion is archived
+            if (data.is_archived) {
+                return;
+            }
+            
             // get the new number of unread messages
             numUnreadMessages -= data.num_messages_read;
 
@@ -426,11 +431,16 @@
             if (data.is_current_user_sender) {
                 return;
             }
+            
+            // ignore if the discussion is archived
+            if (data.is_archived) {
+                return;
+            }
 
             numUnreadMessages += 1;
             messagesBadge.removeClass('d-none');
             messagesBadge.text(numUnreadMessages);
-            
+
             // Show a small popover under the messages icon to indicate that there are new messages
             let popover = new bootstrap.Popover(messagesIcon, {
                 content: 'New Message!',

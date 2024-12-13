@@ -108,6 +108,7 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': discussion.id,
+                        'is_archived': discussion.is_archived,
                         'sender_id': user.id,
                         'sender': user.username,
                         'message': message,
@@ -145,6 +146,7 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': discussion.id,
+                        'is_archived': discussion.is_archived,
                         'is_current_user': is_current_user,
                         'num_messages_read': num_messages_read,  # used to update the unread messages count in navbar
                         'through_load_discussion': data['through_load_discussion']

@@ -15,6 +15,7 @@
                         role="tab" data-bs-toggle="tab" type="button"
                         hx-get="{% url 'get_discussion_page' %}?tab=active"
                         hx-on::before-request="$('#chat-list').empty();"
+                        hx-on::after-request="set_active_tab('active');"
                         hx-trigger="click{% if not is_archived_for_current_user %}, load{% endif %}"
                         hx-target="#chat-list"
                         hx-indicator="#chat-list-spinner">Active
@@ -25,6 +26,7 @@
                         role="tab" data-bs-toggle="tab" type="button"
                         hx-get="{% url 'get_discussion_page' %}?tab=archived"
                         hx-on::before-request="$('#chat-list').empty();"
+                        hx-on::after-request="set_active_tab('archived');"
                         hx-trigger="click{% if is_archived_for_current_user %}, load{% endif %}"
                         hx-target="#chat-list"
                         hx-indicator="#chat-list-spinner">Archived
