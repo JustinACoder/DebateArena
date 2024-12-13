@@ -12,7 +12,15 @@
    hx-indicator="#current-chat-spinner"
    hx-on::before-request="$('#current-chat-content').empty();"
    hx-on::after-request="setup_chat($('#current-chat'))">
-    <div class="discussion-title">{{ discussion.debate.title }}</div>
+    <div class="hstack justify-content-between">
+        <div class="discussion-title">{{ discussion.debate.title }}</div>
+        {% if discussion.inviteuse %}
+            <span class="align-items-center"
+                  title="This discussion originated from an invitation">
+                <i class="bi bi-envelope-fill"></i>
+            </span>
+        {% endif %}
+    </div>
     <div>with <span class="fst-italic"> 
             {% if request.user == discussion.participant1 %}
                 {{ discussion.participant2.username }}

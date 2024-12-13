@@ -1,19 +1,17 @@
 from datetime import timedelta, datetime
 
 from django.core.paginator import Paginator
-from django.db.models import Q, F, BooleanField, When, Case, Value, Max, Window, ExpressionWrapper, DurationField, \
-    CharField, DateTimeField, Subquery, OuterRef, Prefetch
+from django.db.models import Q, F, BooleanField, When, Case, Value, Window, DateTimeField, Subquery, OuterRef
 from django.contrib.auth.decorators import login_required
-from django.db.models.functions import Greatest, TruncTime, ExtractYear, Now, ExtractMonth, ExtractDay, Concat
+from django.db.models.functions import Greatest
 from django.db.models.functions.window import Lag
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from ProjectOpenDebate.common.decorators import login_required_htmx
-from debate.models import Debate
 from discussion.forms import MessageForm
 from discussion.models import Discussion, Message, ReadCheckpoint
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import HttpResponseForbidden, HttpResponseNotFound
 
 
 def set_message_additional_fields(*messages):
@@ -96,8 +94,8 @@ def get_most_recent_discussions_queryset(user, discussions_type='all'):
             ),
             default=Value(False),
             output_field=BooleanField()
-        ),
-    ).select_related('debate').order_by('-recent_date')
+        )
+    ).select_related('debate', 'inviteuse').order_by('-recent_date')
 
 
 @login_required
@@ -232,3 +230,76 @@ def set_archive_status(request, discussion_id):
 
     # Redirect to the discussion that we have just archived
     return redirect('specific_discussion', discussion_id=discussion_id)
+
+
+def initialize_discussion(debate, participant1, participant2):
+    # Create a discussion
+    discussion_instance = Discussion.objects.create(
+        debate=debate,
+        participant1=participant1,
+        participant2=participant2
+    )
+
+    # Create ReadCheckpoints for both participants of the discussion
+    discussion_instance.create_read_checkpoints()
+
+    # If any of the participants is online, we will add the discussion to their list of discussions live
+    discussion_instance.add_discussion_to_participants_list_live()
+
+    return discussion_instance
+
+
+@login_required
+def get_discussion_info(request, discussion_id):
+    """
+    Get information on the discussion to be displayed to the user upon request.
+    The info returned includes:
+    - Debate object
+    - The participants and their stance
+    - The number of messages in the discussion
+    - Discussion object
+    - Origin of the discussion (through an invitation or the platform matchmaking)
+    - Whether the discussion is archived for the current user
+
+    :param discussion_id: The id of the discussion to get information about
+    :param request: The request object
+    :return: The rendered response
+    """
+    # Get the discussion
+    discussion_instance = get_object_or_404(
+        Discussion.objects.filter(
+            Q(participant1=request.user) | Q(participant2=request.user)
+        ).select_related('participant1', 'participant2', 'debate', 'inviteuse'), pk=discussion_id)
+
+    # Get the debate
+    debate_instance = discussion_instance.debate
+
+    # Get the participants and their stance
+    if request.user == discussion_instance.participant1:
+        current_user = discussion_instance.participant1
+        other_user = discussion_instance.participant2
+    else:
+        current_user = discussion_instance.participant2
+        other_user = discussion_instance.participant1
+    current_user.stance = debate_instance.get_stance(current_user)
+    other_user.stance = debate_instance.get_stance(other_user)
+
+    # Get the number of messages in the discussion
+    message_count = discussion_instance.message_set.count()
+
+    # Get the origin of the discussion
+    invite_instance = discussion_instance.inviteuse.invite if discussion_instance.inviteuse else None
+
+    # Check if the conversation should be marked as archived for the current user
+    is_archived_for_current_user = discussion_instance.is_archived_for(request.user)
+
+    context = {
+        'message_count': message_count,
+        'discussion': discussion_instance,
+        'current_user': current_user,
+        'other_user': other_user,
+        'invite': invite_instance,
+        'is_archived_for_current_user': is_archived_for_current_user
+    }
+
+    return render(request, 'discussion/discussion_info.html', context)

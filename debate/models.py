@@ -63,6 +63,12 @@ class Debate(models.Model):
 
     objects = DebateManager()
 
+    def get_stance(self, user):
+        try:
+            return self.stance_set.get(user=user).stance
+        except Stance.DoesNotExist:
+            return None
+
     def save(self, *args, **kwargs):
         # If the debate is new, generate a slug
         if not self.id:

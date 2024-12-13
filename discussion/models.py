@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Coalesce
 from django.dispatch import receiver
 from django.template.loader import render_to_string
 
@@ -136,11 +137,18 @@ class ReadCheckpoint(models.Model):
 
         :return: The number of messages that were read
         """
+        last_message_read_created_at = self.last_message_read.created_at if self.last_message_read else datetime.min
+
         # Get the new last_message_read_id along with the number of messages that were read
-        unread_messages = self.discussion.message_set.filter(created_at__gt=self.last_message_read.created_at)
+        unread_messages = self.discussion.message_set.filter(created_at__gt=last_message_read_created_at)
         num_messages_read = unread_messages.count()
 
         if num_messages_read == 0:
+            # if read_at is not set, this means that we have opened the discussion for the first time
+            # Therefore, we set read_at to the current time
+            if self.read_at is None:
+                self.read_at = datetime.now()
+                self.save()
             return 0
 
         # Update the ReadCheckpoint

@@ -192,6 +192,7 @@
                         <span class="position-absolute translate-middle badge bg-danger border border-light rounded-circle{% if request.user.num_unread_notifications == 0 %} d-none{% endif %}"
                               id="notification-badge"
                               style="top: calc(50% * (1 - cos(45deg))); left: calc(50% * (1 + cos(45deg)));">
+                            {{ request.user.num_unread_notifications }} {# TODO: clip to 99+ using custom filter? #}
                             <span class="visually-hidden">Unread Notification(s)</span>
                         </span>
                     </a>
@@ -320,6 +321,7 @@
             }else {
                 notificationBadge.removeClass('d-none');
             }
+            notificationBadge.text(numberNotifsUnread);
         }
         
         function handleNewNotification(data) {
@@ -397,6 +399,7 @@
         
         /************** Messages **************/
         const messagesBadge = $('#messages-badge');
+        const messagesIcon = $('#messages-icon');
         let numUnreadMessages = {{ request.user.num_unread_messages }};
 
         function handleMessageReadBadge(data) {
@@ -427,6 +430,16 @@
             numUnreadMessages += 1;
             messagesBadge.removeClass('d-none');
             messagesBadge.text(numUnreadMessages);
+            
+            // Show a small popover under the messages icon to indicate that there are new messages
+            let popover = new bootstrap.Popover(messagesIcon, {
+                content: 'New Message!',
+                placement: 'bottom',
+                trigger: 'manual',
+                boundary: 'viewport'
+            });
+            popover.show();
+            setTimeout(() => popover.hide(), 5000);
         }
 
         {# Do not include this handler if we are in the discussion page #}
