@@ -98,7 +98,8 @@ class DiscussionConsumer(CustomBaseConsumer):
 
         # Send the message to all participants in the discussion
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
-        for participant_id in participants_ids:
+        is_archived_flags = [discussion.is_archived_for_p1, discussion.is_archived_for_p2]
+        for participant_id, is_archived in zip(participants_ids, is_archived_flags):
             user_group_name = get_user_group_name(self.__class__.__name__, participant_id)
             await self.channel_layer.group_send(
                 user_group_name,
@@ -108,7 +109,7 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': discussion.id,
-                        'is_archived': discussion.is_archived,
+                        'is_archived': is_archived,
                         'sender_id': user.id,
                         'sender': user.username,
                         'message': message,
@@ -135,7 +136,8 @@ class DiscussionConsumer(CustomBaseConsumer):
 
         # Send the updated ReadCheckpoint information to BOTH participants
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
-        for participant_id in participants_ids:
+        is_archived_flags = [discussion.is_archived_for_p1, discussion.is_archived_for_p2]
+        for participant_id, is_archived in zip(participants_ids, is_archived_flags):
             user_group_name = get_user_group_name(self.__class__.__name__, participant_id)
             is_current_user = participant_id == user.id
             await self.channel_layer.group_send(
@@ -146,7 +148,7 @@ class DiscussionConsumer(CustomBaseConsumer):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': discussion.id,
-                        'is_archived': discussion.is_archived,
+                        'is_archived': is_archived,
                         'is_current_user': is_current_user,
                         'num_messages_read': num_messages_read,  # used to update the unread messages count in navbar
                         'through_load_discussion': data['through_load_discussion']

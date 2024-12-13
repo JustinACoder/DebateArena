@@ -288,7 +288,7 @@ def get_discussion_info(request, discussion_id):
     message_count = discussion_instance.message_set.count()
 
     # Get the origin of the discussion
-    invite_instance = discussion_instance.inviteuse.invite if discussion_instance.inviteuse else None
+    invite_instance = discussion_instance.inviteuse.invite if hasattr(discussion_instance, 'inviteuse') else None
 
     # Check if the conversation should be marked as archived for the current user
     is_archived_for_current_user = discussion_instance.is_archived_for(request.user)
