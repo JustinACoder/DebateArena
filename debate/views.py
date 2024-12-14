@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from voting.models import Vote
 
 from discussion.models import DiscussionRequest, Discussion
-from discussion.views import specific_discussion, initialize_discussion
+from discussion.views import specific_discussion, create_discussion_and_readcheckpoints
 from notifications.models import Notification
 from .forms import CommentForm
 from .models import Debate, Comment, Stance
@@ -202,7 +202,10 @@ def request_discussion(request, debate_slug):
     if earliest_matching_discussion_request:
         # Create a new discussion
         participant1, participant2 = earliest_matching_discussion_request.requester, request.user
-        discussion_instance = initialize_discussion(debate_instance, participant1, participant2)
+        discussion_instance = create_discussion_and_readcheckpoints(debate_instance, participant1, participant2)
+
+        # If any of the participants is online, we will add the discussion to their list of discussions live
+        discussion_instance.add_discussion_to_participants_list_live()
 
         # Create a notification for the waiting participant (e.g. participant1)
         Notification.objects.create_new_discussion_notification(participant1, discussion_instance)

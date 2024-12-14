@@ -232,7 +232,7 @@ def set_archive_status(request, discussion_id):
     return redirect('specific_discussion', discussion_id=discussion_id)
 
 
-def initialize_discussion(debate, participant1, participant2):
+def create_discussion_and_readcheckpoints(debate, participant1, participant2):
     # Create a discussion
     discussion_instance = Discussion.objects.create(
         debate=debate,
@@ -242,9 +242,6 @@ def initialize_discussion(debate, participant1, participant2):
 
     # Create ReadCheckpoints for both participants of the discussion
     discussion_instance.create_read_checkpoints()
-
-    # If any of the participants is online, we will add the discussion to their list of discussions live
-    discussion_instance.add_discussion_to_participants_list_live()
 
     return discussion_instance
 
@@ -288,7 +285,7 @@ def get_discussion_info(request, discussion_id):
     message_count = discussion_instance.message_set.count()
 
     # Get the origin of the discussion
-    invite_instance = discussion_instance.inviteuse.invite if hasattr(discussion_instance, 'inviteuse') else None
+    invite_instance = discussion_instance.inviteuse.invite if discussion_instance.is_from_invite else None
 
     # Check if the conversation should be marked as archived for the current user
     is_archived_for_current_user = discussion_instance.is_archived_for(request.user)

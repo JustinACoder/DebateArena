@@ -39,6 +39,10 @@ class Discussion(models.Model):
     is_archived_for_p2 = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def is_from_invite(self):
+        return hasattr(self, 'inviteuse')
+
     def create_read_checkpoints(self):
         """
         Create ReadCheckpoints for both participants of the discussion.
@@ -69,6 +73,7 @@ class Discussion(models.Model):
                     'type': 'send.json',
                     'data': {
                         'discussion_id': self.id,
+                        'from_invite': self.is_from_invite,
                         'html': discussion_html,
                     }
                 }
