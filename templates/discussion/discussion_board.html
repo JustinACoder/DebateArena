@@ -246,6 +246,9 @@
 
             // Prepend the new chat to the chat list
             element.hide().prependTo(chatList).slideDown();
+            
+            // Process the element using htmx
+            htmx.process(element[0]);
         }
 
         function handle_read_messages(data) {
