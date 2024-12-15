@@ -178,7 +178,7 @@
             let delay = instant ? 0 : 100;
             let readNotice = $('#read-notice');
             readNotice.slideUp(delay, function () {
-                readNotice.appendTo('#message-list').slideDown(delay);
+                readNotice.removeClass('d-none').appendTo('#message-list').slideDown(delay);
             });
         }
         
