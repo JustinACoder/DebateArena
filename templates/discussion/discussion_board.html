@@ -166,12 +166,23 @@
 
         /* WebSocket chat */
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
+        let messageTimeoutID = null;
         websocketManager.add_handler('discussion', 'new_message', handle_new_message);
         websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
         websocketManager.add_handler('discussion', 'read_messages', handle_read_messages);
 
         function set_active_tab(tab) {
             active_tab = tab;
+        }
+        
+        function set_send_button_state(disabled) {
+            $('#send-message-spinner').toggleClass('d-none', !disabled);
+            $('#send-message-text').toggleClass('d-none', disabled);
+            $('#send-message').prop('disabled', disabled);
+        }
+        
+        function is_send_button_disabled() {
+            return $('#send-message').prop('disabled');
         }
 
         function update_read_notice(instant = false) {
@@ -228,6 +239,14 @@
             if (!data['is_current_user_sender']) {
                 update_read_notice(true); // make it instant to avoid delayed visual when inserting a new message
                 websocketManager.read_messages(currentDiscussionId);
+            }
+            
+            if (data['is_current_user_sender']) {
+                // hide the spinner and show the button
+                set_send_button_state(false);
+                
+                // clear the timeout
+                clearTimeout(messageTimeoutID);
             }
         }
 
@@ -332,11 +351,24 @@
                 if (message === '') {
                     return;
                 }
+                
+                if (is_send_button_disabled()) {
+                    return;
+                }
 
                 websocketManager.send_chat_message(discussionId, message);
 
                 textarea.val('');
                 textarea.prop('rows', 1);
+                
+                // hide button and show spinner
+                set_send_button_state(true);
+                
+                // throw error if it takes more than 5 seconds to send the message
+                messageTimeoutID = setTimeout(function () {
+                    set_send_button_state(false);
+                    $.toast("error", "An error occurred while sending the message. Please try again.");
+                }, 5000);
 
                 {# Note: we do not add the message to the chat history here, #}
                 {# because we are waiting for the websocket to send it back #}
