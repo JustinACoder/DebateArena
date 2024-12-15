@@ -2,12 +2,12 @@
 <div class="row">
     <div class="col">
         <p class="fw-bold">Debate</p>
-        <p><a href="{% url 'debate' discussion.debate.id %}">{{ discussion.debate.title }}</a></p>
+        <p><a href="{% url 'debate' discussion.debate.slug %}">{{ discussion.debate.title }}</a></p>
     </div>
     <div class="col">
         <p class="fw-bold">Participants</p>
         <p>
-            <a href="{% url 'account_profile' current_user.id %}">You</a>
+            <a href="{% url 'account_profile' current_user.username %}">You</a>
             {% if current_user.stance %}
                 (<span class="text-success">For</span>)
             {% elif current_user.stance == False %}
@@ -16,7 +16,7 @@
                 (<span class="text-muted">No Stance</span>)
             {% endif %}
             vs
-            <a href="{% url 'account_profile' other_user.id %}">{{ other_user.username }}</a>
+            <a href="{% url 'account_profile' other_user.username %}">{{ other_user.username }}</a>
             {% if other_user.stance %}
                 (<span class="text-success">For</span>)
             {% elif other_user.stance == False %}
