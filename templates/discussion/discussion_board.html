@@ -1,99 +1,159 @@
 {% extends "base.html" %}
 {% load static %}
 {% load crispy_forms_filters %}
-{% load tz %} {# used to force America/Montreal timezone, this should adapt to the user/device #}
 
 {% block head %}
-    <script src="{% static 'libraries/jquery.timeago.min.js' %}" type="text/javascript"></script>
-
     <style>
         #main-content {
             overflow-y: auto;
         }
 
         .overflow-y-scroll-custom {
-            overflow-y: scroll;
+            overflow-y: auto;
             scrollbar-color: rgba(var(--bs-secondary-rgb)) transparent;
+        }
+
+        #chat-list-canvas {
+            width: 100%
+        }
+
+        @media (min-width: 576px) {
+            #chat-list-canvas {
+                width: 325px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            #chat-list-canvas {
+                width: min(325px, 37.5vw);
+            }
+
+            #discussion-layout {
+                padding: 0.5rem; /* p-2 */
+                gap: 0.5rem; /* gap-2 */
+            }
+
+            #discussion-layout .discussion-layout-section {
+                border-radius: 0.5rem; /* rounded-4 */
+                box-shadow: var(--bs-box-shadow); /* shadow */
+            }
+        }
+
+        @supports (field-sizing: content) {
+            #current-chat, #message-form .flex-grow-1:has(> textarea) {
+                min-width: 0;
+            }
+
+            #message-form textarea {
+                field-sizing: content;
+                max-height: min(400px, 30vh);
+            }
+        }
+
+        @container (min-width: 576px) {
+            .container-relative {
+                max-width: 540px !important;
+            }
+        }
+
+        @container (min-width: 768px) {
+            .container-relative {
+                max-width: 720px !important;
+            }
+        }
+
+        @container (min-width: 992px) {
+            .container-relative {
+                max-width: 960px !important;
+            }
+        }
+
+        @container (min-width: 1200px) {
+            .container-relative {
+                max-width: 1140px !important;
+            }
+        }
+
+        @container (min-width: 1400px) {
+            .container-relative {
+                max-width: 1320px !important;
+            }
+        }
+
+        .message-text {
+            max-width: min(75%, 650px);
+            border-radius: 24px;
+            padding: 8px 12px;
+        }
+
+        .message-right > .message-text {
+            background-color: dodgerblue;
+            color: white;
+        }
+
+        .message-left > .message-text {
+            background-color: whitesmoke;
+            color: black;
+        }
+
+        .message-text {
+            margin-bottom: 0.5rem; /* m-2 */
+        }
+
+        .message-left {
+            justify-content: start;
+        }
+
+        .message-right {
+            justify-content: end;
+        }
+
+        /* if the message is on the right and the next message is also on the right */
+        #message-list li:has( .message-right):has(+ li .message-right) .message-text {
+            border-bottom-right-radius: 4px;
+            margin-bottom: 1px;
+        }
+
+        /* if the message is on the left and the next message is also on the left */
+        #message-list li:has( .message-left):has(+ li .message-left) .message-text {
+            border-bottom-left-radius: 4px;
+            margin-bottom: 1px;
+        }
+
+        /* if the message is on the right and the previous message is also on the right */
+        #message-list li:has( .message-right) + li .message-right .message-text {
+            border-top-right-radius: 4px;
+            margin-top: 1px;
+        }
+
+        /* if the message is on the left and the previous message is also on the left */
+        #message-list li:has( .message-left) + li .message-left .message-text {
+            border-top-left-radius: 4px;
+            margin-top: 1px;
+        }
+        
+        /* If the read notice is right below a message or if it is the last message, remove the margin */
+        #message-list li:has(+ li#read-notice) .message-text, #message-list li:last-of-type .message-text {
+            margin-bottom: 0 !important;
+        }
+
+        /* When a discussion is unread, add a small blue border than "moves around" */
+        .unread .discussion-title {
+            font-weight: bold !important;
+        }
+
+        .unread .latest-message {
+            font-weight: bold;
+            color: var(--bs-dark) !important;
         }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid h-100">
-        <div class="p-2 position-absolute start-0 end-0" style="margin: 0 20%">
-            <button class="btn btn-primary d-md-none w-100 fs-5" type="button" data-bs-toggle="offcanvas"
-                    data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas">
-                Open Discussion List
-            </button>
-        </div>
-        <div class="row flex-nowrap h-100">
-            <div class="col-auto bg-light p-2 pe-0 h-100 offcanvas-md offcanvas-start"
-                 style="width: 300px"
-                 id="chat-list-canvas">
-                <div class="offcanvas-header">
-                    <h5 class="offcanvas-title">Your Discussions</h5>
-                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                            data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
-                            aria-label="Close"></button>
-                </div>
-                <div class="overflow-y-scroll-custom h-100 w-100" id="chat-list">
-                    {% for discussion_info in discussions_info %}
-                        <a href="{% url 'specific_discussion' discussion_info.discussion_id %}"
-                           data-discussionid="{{ discussion_info.discussion_id }}"
-                           id="discussion-{{ discussion_info.discussion_id }}"
-                           data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas"
-                           aria-controls="chat-list-canvas"
-                           class="btn btn-light w-100 text-start my-2">
-                            <strong>{{ discussion_info.debate_title }}</strong><br>
-                            <span class="fst-italic">
-                        {% if request.user.id == discussion_info.participant1_id %}
-                            {{ discussion_info.participant2_username }}
-                        {% else %}
-                            {{ discussion_info.participant1_username }}
-                        {% endif %}
-                        </span><br>
-                            <div class="row">
-                            <span id="latest-message-{{ discussion_info.discussion_id }}"
-                                  class="fst-italic text-secondary small col">{{ discussion_info.message_text|default_if_none:'No message yet'|truncatechars:25 }}</span>
-                                {# TODO: determine the timezone based on the user/device #}
-                                <time class="timeago text-secondary small col-auto me-auto"
-                                      id="latest-message-time-{{ discussion_info.discussion_id }}"
-                                      datetime="{{ discussion_info.message_created_at|timezone:"America/Montreal"|date:"c" }}"></time>
-                            </div>
-                        </a>
-                    {% empty %}
-                        <p class="text-center" id="no-discussions">No discussions yet.</p>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="col d-flex flex-column p-0" id="current-chat">
-                <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom ps-3" id="chat-history">
-                    {% if discussion_id is None %}
-                        <div class="align-items-center justify-content-center d-flex">
-                            <p class="text-secondary m-4">
-                                Once you have a discussion, you will be able to see it here. To start debating with
-                                someone,
-                                choose a debate from the <a href="{% url 'debate_explore' %}">index</a>, take a stance,
-                                and click on the stance you wish to debate.
-                            </p>
-                        </div>
-                    {% endif %}
-                </div>
-                <div class="mt-3 px-3" id="message-box">
-                    <form id="message-form">
-                        <div class="row">
-                            <div class="col">
-                                {{ message_form.text | as_crispy_field }}
-                            </div>
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-primary"
-                                        id="send-message" {{ discussion_id|yesno:",,disabled" }}>Send
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <div class="h-100 bg-primary-subtle">
+        <div class="hstack h-100" id="discussion-layout">
+            {% include 'discussion/discussion_list_panel.html' %}
+            {% include 'discussion/current_chat_panel.html' %}
         </div>
     </div>
 
@@ -102,278 +162,262 @@
         {# TODO: make sure the websocket connection stays open for long periods of time (?) #}
         /* Switching between chats */
         const chatList = $('#chat-list');
-        const chatHistory = $('#chat-history');
-        const allChats = $('#chat-list a');
-        const noDiscussionsNotice = $('#no-discussions');
-        const spinner = $(`
-            <div class="align-items-center justify-content-center d-flex">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        `);
-        const startOfDiscussionMessage = $(`
-            <div class="align-items-center justify-content-center d-flex">
-                <p class="text-secondary m-4">Start of Discussion</p>
-            </div>
-        `);
-        allChats.click(switch_chat);
-
+        let active_tab = "{{ is_archived_for_current_user|yesno:'archived,active' }}";
 
         /* WebSocket chat */
-        {# TODO: put reusable sections into a file that we can include #}
         let currentDiscussionId = {{ discussion_id|default_if_none:-1 }};
-        let currentMessagePage = 1;
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/`);
-        ws.onmessage = function (event) {
-            let wsMessage = JSON.parse(event.data);
+        let messageTimeoutID = null;
+        websocketManager.add_handler('discussion', 'new_message', handle_new_message);
+        websocketManager.add_handler('discussion', 'new_discussion', handle_new_discussion);
+        websocketManager.add_handler('discussion', 'read_messages', handle_read_messages);
 
-            let payload = wsMessage['payload'];
-
-            // Check if there was an error
-            if (payload['status'] === 'error') {
-                alert(`Error (${payload['event_type']}): ${payload['message']}`);
-                return;
-            }
-
-            // Give the message to the appropriate handler
-            let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
-            switch (handler_key) {
-                case 'message.new_message':
-                    handle_new_message(payload['data']);
-                    break;
-                case 'discussion.new_discussion':
-                    handle_new_discussion(payload['data']);
-                    break;
-                default:
-                    alert(`This event type is not handled: ${handler_key}`);
-            }
+        function set_active_tab(tab) {
+            active_tab = tab;
+        }
+        
+        function set_send_button_state(disabled) {
+            $('#send-message-spinner').toggleClass('d-none', !disabled);
+            $('#send-message-text').toggleClass('d-none', disabled);
+            $('#send-message').prop('disabled', disabled);
+        }
+        
+        function is_send_button_disabled() {
+            return $('#send-message').prop('disabled');
         }
 
-        function encodehtml(s) {
-            return $('<textarea />').text(s).html();
+        function update_read_notice(instant = false) {
+            let delay = instant ? 0 : 100;
+            let readNotice = $('#read-notice');
+            readNotice.slideUp(delay, function () {
+                readNotice.removeClass('d-none').appendTo('#message-list').slideDown(delay);
+            });
         }
+        
+        function update_current_discussion() {
+            // clear the active class from all discussions
+            chatList.find('.active').removeClass('active');
 
-        function decodehtml(s) {
-            return $('<textarea />').html(s).text();
+            // add the active class to the current discussion
+            $('#discussion-' + currentDiscussionId).addClass('active');
         }
 
         function handle_new_message(data) {
-            updateMostRecent(data['discussion_id'], data['message']);
+            updateMostRecent(data['discussion_id'], data['message'], data['is_current_user_sender'], data.is_archived);
 
             if (data['discussion_id'] !== currentDiscussionId) {
+                // if the message is not from the current discussion,
+                // add 1 to the unread message badge
+                // the function will only add 1 if the message is not from the current user
+                // and if the message is not from an archived discussion
+                handleNewMessageUpdateBadge(data);  {# defined in base.html #}
                 return;
             }
 
-            let is_current_user = data['sender_id'] === {{ request.user.id }};
+            let messageList = $('#message-list');
+
+            // determine if we should scroll to the bottom after adding the message
+            // if the user is currently at no more than 100px from the bottom, scroll to the bottom
+            let shouldScroll = messageList[0].scrollHeight - messageList.scrollTop() - messageList.outerHeight() <= 100;
+
+            // if there is a time separator, add it
+            messageList.append($(data['separator_html']));
 
             {# TODO: should we set the datetime using the server time which would be sent in the message? #}
-            addMessageToChatHistory(data['message'], is_current_user, new Date(), true);
+            // Add message to chat history
+            let element = $(`<li>${data['html']}</li>`);
+            messageList.append(element);
+
+            // if the user was at the bottom, scroll to the bottom
+            if (shouldScroll) {
+                messageList.scrollTop(messageList[0].scrollHeight);
+            }
+            
+            // If the message comes from the other user, tell the server that we have read the messages
+            // we will also directly mark that the sender has seen his own message
+            {# TODO: in the future, maybe we would want to only mark the messages as read once they enter the viewport #}
+            {# TODO: there is probably some kind of optimization possible here so that we dont send a ws for every message only to read the messages #}
+            if (!data['is_current_user_sender']) {
+                update_read_notice(true); // make it instant to avoid delayed visual when inserting a new message
+                websocketManager.read_messages(currentDiscussionId);
+            }
+            
+            if (data['is_current_user_sender']) {
+                // hide the spinner and show the button
+                set_send_button_state(false);
+                
+                // clear the timeout
+                clearTimeout(messageTimeoutID);
+            }
         }
 
         function handle_new_discussion(data) {
-            // Add the new discussion to the chat list
-            let discussionID = data['discussion_id'];
-            let chatURL = `{% url 'specific_discussion' 0 %}`.replace('0', discussionID);
-            let safeTitle = encodehtml(data['debate_title']);
-            let otherParticipant = data['participant1_id'] === {{ request.user.id }} ? data['participant2_username'] : data['participant1_username'];
-            let safeOtherParticipant = encodehtml(otherParticipant);
-            let new_chat_html = `
-                <a href="${chatURL}" data-discussionid="${discussionID}" id="discussion-${discussionID}"
-                   data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas"
-                   class="btn btn-light w-100 text-start my-2">
-                    <strong>${safeTitle}</strong><br>
-                    <span class="fst-italic">${safeOtherParticipant}</span><br>
-                    <div class="row">
-                        <span id="latest-message-${discussionID}" class="fst-italic text-secondary small col">No message yet</span>
-                        <time class="timeago text-secondary small col-auto me-auto" id="latest-message-time-${discussionID}"></time>
-                    </div>
-                </a>
-            `;
+            // ignore if we are in the archived tab (new dicussion are always active)
+            if (active_tab === 'archived') {
+                return;
+            }
+            
+            let element = $(`<li>${data['html']}</li>`);
 
-            // Remove the no discussions notice if it is present
-            noDiscussionsNotice.remove();
+            // If the list is empty, change the notice
+            if (chatList.length === 1) {
+                $('#discussions-notice').text('No more discussions.');
+            }
 
             // Prepend the new chat to the chat list
-            let element = $(new_chat_html);
-            chatList.prepend(element);
-
-            // Add the click handler to the new chat
-            element.click(switch_chat);
-
+            element.hide().prependTo(chatList).slideDown();
+            
+            // Process the element using htmx
+            htmx.process(element[0]);
         }
 
-        const form = $('#message-form');
-        const messageInput = $('#message-text-input');
-        const sendButton = $('#send-message');
-        form.submit(function (event) {
-            event.preventDefault();
-            let message = messageInput[0].value.trim();
+        function handle_read_messages(data) {
+            let discussionId = data['discussion_id'];
+            let isCurrentUser = data['is_current_user'];
+            let relatedDiscussion = $('#discussion-' + discussionId);
 
-            if (sendButton.prop('disabled') || message === '') {
+            // if it comes from the current user, remove the unread class
+            {# This is needed if a user has two windows open on two different conversations #}
+            {# Indeed, in this case, if the user view the message in one window, it should mark it as read in the other #}
+            if (isCurrentUser) {
+                relatedDiscussion.removeClass('unread');
+                
+                // if we are not in the discussion read, update the badge
+                // there is an exception if the read is due to the user first opening the discussion
+                if (discussionId !== currentDiscussionId && !data['through_load_discussion']) {
+                    handleMessageReadBadge(data);  {# defined in base.html #}
+                }
                 return;
             }
 
-            let data = {
-                'stream': 'message',
-                'payload': {
-                    'event_type': 'new_message',
-                    'data': {
-                        'message': message,
-                        'discussion_id': currentDiscussionId
-                    },
-                }
-            };
-            ws.send(JSON.stringify(data));
-
-            messageInput[0].value = '';
-
-            {# Note: we do not add the message to the chat history here, #}
-            {# because we are waiting for the websocket to send it back #}
-            {# This serves as a confirmation that the message was sent #}
-        });
-
-        function addMessageToChatHistory(text, is_current_user, datetime, new_message) {
-            // TODO: add datetime to the message
-            let message = document.createElement('div');
-            let bgColor = is_current_user ? 'dodgerblue' : 'whitesmoke';
-            let textColor = is_current_user ? 'white' : 'black';
-            let justify = is_current_user ? 'justify-content-end' : 'justify-content-start';
-            let safeText = encodehtml(text);
-            message.classList.add('m-1', 'd-flex', justify);
-            message.innerHTML = `<p style="background-color: ${bgColor}; color: ${textColor}; max-width: min(75%, 650px); border-radius: 24px; padding: 8px 12px;" class="mb-0 text-break text-wrap align-content-center">${safeText}</p>`;
-
-            if (new_message) {
-                chatHistory.prepend(message);
-            } else {
-                spinner.before(message);
+            // if it comes from the other user and we are in the discussion, update the read notice
+            if (discussionId === currentDiscussionId) {
+                update_read_notice();
             }
         }
 
-        function updateMostRecent(discussionId, message) {
+        function updateMostRecent(discussionId, message, is_current_user_sender, is_archived) {
+            if (is_archived !== (active_tab === 'archived')) {
+                return;
+            }
+            
+            let relatedDiscussion = $('#discussion-' + discussionId);
+
+            // If the discussion is not in the chat list, fetch it
+            // Note: no need to then update the latest message as it will come with the discussion
+            {# TODO: needs testing #}
+            if (!relatedDiscussion.length) {
+                $.get('{% url "get_single_discussion" %}', {discussion_id: discussionId}, function (data) {
+                    handle_new_discussion({html: data});
+                });
+                return;
+            }
+
+            // else, update the latest message of the existing discussion and move it to the top
+
             // Update the latest message in the chat list
             // let latestMessageSpan = $(`#latest-message-${discussionId}`); // commented out as this lags the IDE for some reason
             let latestMessageSpan = $('#latest-message-' + discussionId);
-            let truncatedMessage = message.length > 25 ? message.substring(0, 25) + '...' : message;
-            latestMessageSpan.text(truncatedMessage);
+            latestMessageSpan.text(message);
+
+            // if its not the current discussion and we arent the sender, add the unread class to the discussion
+            if (discussionId !== currentDiscussionId && !is_current_user_sender) {
+                relatedDiscussion.addClass('unread');
+            }
 
             // Update the time of the latest message
             let latestMessageTime = $('#latest-message-time-' + discussionId);
             latestMessageTime.timeago('update', new Date());
 
             // Put the discussion at the top of the list
-            let discussion = $('#discussion-' + discussionId)[0];
+            let discussion = relatedDiscussion[0];
             chatList.prepend(discussion);
         }
 
-        function switch_chat(event) {
-            // Prevent the default action and set the url
-            event.preventDefault();
-            const url = $(this).attr('href');
-            window.history.pushState('', '', url);
+        function setup_chat(element) {
+            let form = element.find('#message-form');
+            let textarea = form.find('textarea');
+            let discussionId = parseInt(form.find('input[name="discussion_id"]').val());
+            currentDiscussionId = discussionId;
+            update_current_discussion();
+            
+            // Tell server to indicate that the messages are read
+            websocketManager.read_messages(currentDiscussionId, true);
 
-            // Add the loading spinner
-            chatHistory.empty();
-            chatHistory.append(spinner);
-
-            // Set hasNext to true in case we had reached the end of the discussion before
-            hasNext = true;
-
-            // Make the clicked chat active by changing the background color
-            allChats.removeClass('active');
-            $(this).addClass('active');
-
-            // Load the messages
-            currentMessagePage = 1;
-            loadMessages(url, currentMessagePage, true);
-
-            // Set the discussion id
-            currentDiscussionId = $(this).data('discussionid');
-
-            // Enable the send button if it was disabled
-            sendButton.prop('disabled', false);
-        }
-
-        function loadMessages(discussion_url, page, include_discussion_info) {
-            fetch(discussion_url + 'messages/?' + new URLSearchParams({
-                'page': page,
-                'include_discussion_info': include_discussion_info
-            }), {
-                method: 'GET'
-            }).then(response => response.json())
-                .then(data => {
-                    // Add the messages to the chat history
-                    data.messages.forEach(message => {
-                        addMessageToChatHistory(message['text'], message['is_current_user'], new Date(message['created_at']));
-                    });
-
-                    // if it's the last page and there are no messages, remove the spinner and add the
-                    // start of discussion message. We will also mark the discussion as fully loaded
-                    if (!data.has_next) {
-                        spinner.remove();
-                        chatHistory.append(startOfDiscussionMessage);
-                        hasNext = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    currentMessagePage--;  // Try again next time from the same page
-                })
-                .finally(() => loading = false);
-        }
-
-        // Load more messages when the user scrolls to the bottom of the chat history
-        let loading = false;
-        let hasNext = true;
-        chatHistory.scroll(function () {
-            {# Note that, since the chat-history div is column-REVERSE, the bottom is at the top! #}
-            let numberOfPixelsFromBottom = chatHistory[0].scrollHeight + chatHistory.scrollTop() - chatHistory.height();
-            if (numberOfPixelsFromBottom < 100 && !loading && hasNext) {
-                loading = true;
-                currentMessagePage++;
-                loadMessages(window.location.pathname, currentMessagePage, false);
-            }
-        });
-
-        // Make the Enter key submit the form
-        // Make alt, ctrl, shift + Enter add a new line
-        messageInput.keypress(function (event) {
-            if (event.which === 13 && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+            // form listener
+            form.submit(function (event) {
                 event.preventDefault();
-                form.submit();
+                let message = textarea.val().trim();
+
+                if (message === '') {
+                    return;
+                }
+                
+                if (is_send_button_disabled()) {
+                    return;
+                }
+
+                websocketManager.send_chat_message(discussionId, message);
+
+                textarea.val('');
+                textarea.prop('rows', 1);
+                
+                // hide button and show spinner
+                set_send_button_state(true);
+                
+                // throw error if it takes more than 5 seconds to send the message
+                messageTimeoutID = setTimeout(function () {
+                    set_send_button_state(false);
+                    $.toast("error", "An error occurred while sending the message. Please try again.");
+                }, 5000);
+
+                {# Note: we do not add the message to the chat history here, #}
+                {# because we are waiting for the websocket to send it back #}
+                {# This serves as a confirmation that the message was sent #}
+            });
+
+            // Make the Enter key submit the form
+            // Make alt, ctrl, shift + Enter add a new line
+            textarea.keypress(function (event) {
+                if (event.which === 13 && !event.altKey && !event.ctrlKey && !event.shiftKey) {
+                    event.preventDefault();
+                    form.submit();
+                }
+            });
+
+            // Check if field-sizing: content is supported
+            if (textarea.css('field-sizing') === 'content') {
+                return;
             }
-        });
 
-        $(document).ready(function () {
-            {# TODO: load with the page instead of simulating a click #}
-            {% if discussion_id %}
-                // Once the page is loaded, simulate a click on the first chat
-                $('#discussion-{{ discussion_id }}').click();
-            {% endif %}
+            {# TODO: all of this can be changed by field-sizing: content (in the future) #}
+            {# Not the exact same behaviour. A scrollbar may appear when adding a character in the middle of a row #}
+            textarea.on('input', function () {
+                // Remove rows until the scrollHeight is less than the offsetHeight
+                while (textarea[0].offsetHeight > textarea[0].scrollHeight
+                && textarea.prop('rows') > 1) {
+                    textarea.prop('rows', textarea.prop('rows') - 1);
+                }
 
-            // initialize timeago
-            jQuery.timeago.settings.strings = {
-                prefixAgo: null,
-                prefixFromNow: null,
-                suffixAgo: "",
-                suffixFromNow: "",
-                seconds: "Now",
-                minute: "1m",
-                minutes: "%dm",
-                hour: "1h",
-                hours: "%dh",
-                day: "1d",
-                days: "%dd",
-                month: "1mo",
-                months: "%dmo",
-                year: "1yr",
-                years: "%dyr",
-                wordSeparator: " ",
-                numbers: []
-            };
-            $("time.timeago").timeago();
+                // Add rows until the scrollHeight is greater than the offsetHeight
+                while (textarea[0].offsetHeight < textarea[0].scrollHeight
+                && textarea[0].offsetHeight < 400
+                && textarea[0].offsetHeight < 0.3 * window.innerHeight) {
+                    textarea.prop('rows', textarea.prop('rows') + 1);
+                }
 
-        });
+                // try to remove one row (now that the scrollbar isnt there anymore)
+                if (textarea.prop('rows') > 1) {
+                    textarea.prop('rows', textarea.prop('rows') - 1);
+                    if (textarea[0].offsetHeight < textarea[0].scrollHeight) {
+                        textarea.prop('rows', textarea.prop('rows') + 1);
+                    }
+                }
+
+                /*messageInput.css('overflow-y', 'hidden')
+                messageInput.css('height', 'auto');
+                messageInput.css('height', `min(${messageInput[0].scrollHeight + 2}px, 600px, 50vh)`);
+                messageInput.css('overflow-y', 'auto');*/
+            });
+        }
     </script>
 {% endblock %}

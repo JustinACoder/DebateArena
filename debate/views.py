@@ -10,7 +10,8 @@ from django.views.decorators.http import require_POST
 from voting.models import Vote
 
 from discussion.models import DiscussionRequest, Discussion
-from discussion.views import specific_discussion
+from discussion.views import specific_discussion, create_discussion_and_readcheckpoints
+from notifications.models import Notification
 from .forms import CommentForm
 from .models import Debate, Comment, Stance
 import logging
@@ -199,17 +200,15 @@ def request_discussion(request, debate_slug):
 
     # If there was a matching request, create a discussion and return the discussion page
     if earliest_matching_discussion_request:
-        # Create a discussion
-        participant1 = earliest_matching_discussion_request.requester
-        participant2 = request.user
-        discussion_instance = Discussion.objects.create(
-            debate=debate_instance,
-            participant1=participant1,
-            participant2=participant2
-        )
+        # Create a new discussion
+        participant1, participant2 = earliest_matching_discussion_request.requester, request.user
+        discussion_instance = create_discussion_and_readcheckpoints(debate_instance, participant1, participant2)
 
-        # Notify the participants about the new discussion
-        discussion_instance.notify_participants()
+        # If any of the participants is online, we will add the discussion to their list of discussions live
+        discussion_instance.add_discussion_to_participants_list_live()
+
+        # Create a notification for the waiting participant (e.g. participant1)
+        Notification.objects.create_new_discussion_notification(participant1, discussion_instance)
 
         messages.success(request, 'Debate started successfully.')
 

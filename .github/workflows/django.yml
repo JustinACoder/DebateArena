@@ -15,6 +15,16 @@ jobs:
       matrix:
         python-version: ['3.10']
 
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+      DB_HOST: ${{ vars.DB_HOST }}
+      DB_PORT: ${{ vars.DB_PORT }}
+      DB_NAME: ${{ vars.DB_NAME }}
+      DB_USER: ${{ vars.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      ENV: ${{ vars.ENV }}
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}

@@ -1,0 +1,18 @@
+{% load tz %} {# used to force America/Montreal timezone, this should adapt to the user/device #}
+
+{% for discussion in page %}
+    <li
+            {% if forloop.last and page.has_next %}
+                hx-trigger="intersect once"
+                hx-get="{% url 'get_discussion_page' %}?page={{ page.next_page_number }}&tab={{ tab }}"
+                hx-swap="afterend"
+            {% endif %}>
+        {% include 'discussion/discussion.html' with discussion=discussion %}
+    </li>
+{% empty %}
+    <li id="discussions-notice" class="my-2 text-center text-muted">No discussions yet.</li>
+{% endfor %}
+
+{% if not page.has_next and page %}
+    <li id="discussions-notice" class="my-2 text-center text-muted">No more discussions.</li>
+{% endif %}

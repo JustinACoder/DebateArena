@@ -1,0 +1,24 @@
+<div class="discussion-layout-section flex-grow-1 h-100 bg-light position-relative" id="current-chat"
+     hx-indicator="#current-chat-spinner"
+        {% if discussion_id is not None %}
+     hx-trigger="load"
+     hx-get="{% url 'get_current_chat_page' discussion_id %}"
+     hx-target="#current-chat-content"
+     hx-on::after-request="setup_chat($(this))"
+        {% endif %}>
+    <div id="current-chat-content" class="h-100 d-flex flex-column"
+         hx-indicator="#current-chat-spinner" style="container-type: inline-size;">
+        {% if discussion_id is None %}
+            <div class="container container-relative h-100 align-items-center justify-content-center d-flex">
+                <p class="text-secondary text-center">
+                    Once you have a discussion, you will be able to see it here. To start debating with
+                    someone, choose a debate from the <a href="{% url 'debate_explore' %}">explore page</a>, 
+                    take a stance, and request a discussion with another user of the stance of your choice.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+    <div class="position-absolute top-50 start-50 translate-middle">
+        {% include 'common/spinner.html' with id='current-chat-spinner' %}
+    </div>
+</div>

@@ -1,0 +1,40 @@
+{% load tz %}
+
+<a href="{% url 'specific_discussion' discussion.id %}"
+   data-discussionid="{{ discussion.id }}"
+   id="discussion-{{ discussion.id }}"
+   data-bs-dismiss="offcanvas" data-bs-target="#chat-list-canvas"
+   aria-controls="chat-list-canvas"
+   class="btn btn-light border-0 w-100 text-start {{ has_unread|yesno:'unread,' }}"
+   hx-get="{% url 'get_current_chat_page' discussion.id %}"
+   hx-target="#current-chat-content"
+   hx-push-url="{% url 'specific_discussion' discussion.id %}"
+   hx-indicator="#current-chat-spinner"
+   hx-on::before-request="$('#current-chat-content').empty();"
+   hx-on::after-request="setup_chat($('#current-chat'))">
+    <div class="hstack justify-content-between">
+        <div class="discussion-title">{{ discussion.debate.title }}</div>
+        {% if discussion.inviteuse %}
+            <span class="align-items-center"
+                  title="This discussion originated from an invitation">
+                <i class="bi bi-envelope-fill"></i>
+            </span>
+        {% endif %}
+    </div>
+    <div>with <span class="fst-italic"> 
+            {% if request.user == discussion.participant1 %}
+                {{ discussion.participant2.username }}
+            {% else %}
+                {{ discussion.participant1.username }}
+            {% endif %}
+        </span>
+    </div>
+    <div class="row">
+        <span id="latest-message-{{ discussion.id }}"
+              class="fst-italic text-secondary small col text-truncate pe-1 latest-message">{{ discussion.latest_message_text|default:'No message yet'|truncatechars:75 }}</span>
+        {# TODO: determine the timezone based on the user/device #}
+        <time class="timeago text-secondary small col-auto me-auto ps-0"
+              id="latest-message-time-{{ discussion.id }}"
+              datetime="{{ discussion.latest_message_created_at|timezone:"America/Montreal"|date:"c" }}"></time>
+    </div>
+</a>
