@@ -1,0 +1,74 @@
+{% if page.number == 1 %}
+    {% include 'discussion/current_chat_header.html' %}
+
+    <div class="d-flex flex-grow-1 flex-column-reverse overflow-y-scroll-custom"
+         hx-indicator="#message-spinner">
+    <div id="message-list-container">
+    <ul class="list-unstyled mb-2" id="message-list">
+{% endif %}
+
+{% if page and not page.has_next %}
+    <li class="text-center text-muted my-2">Start of discussion</li>
+{% endif %}
+
+{% for message in page reversed %}
+    {# if the message is the first of its time group, add a time notice #}
+    {% if message.first_of_group %}
+        {% include 'discussion/datetime_separator.html' with formatted_datetime=message.formatted_datetime %}
+    {% endif %}
+
+    <li
+            {% if forloop.first and page.has_next %}
+                hx-trigger="intersect once"
+                hx-get="{% url 'get_current_chat_page' discussion.id %}?page={{ page.next_page_number }}"
+                hx-target="this"
+                hx-swap="beforebegin"
+            {% endif %}>
+        {% include 'discussion/message.html' with message=message is_current_user=message.is_current_user %}
+    </li>
+
+    {# if the message is the last read by the other user, add a read notice #}
+    {% if read_checkpoint.last_message_read_id == message.id %}
+        {% include 'discussion/read_notice.html' %}
+    {% endif %}
+{% empty %}
+    {# still include the read notice but hide it, this will allow it to move around once messages are added #}
+    {% include 'discussion/read_notice.html' with hidden=True %}
+    <li class="text-center text-muted my-2">No messages yet</li>
+{% endfor %}
+
+{% if page.number == 1 %}
+    </ul>
+    </div>
+    {% include 'common/spinner.html' with id='message-spinner' %}
+    </div>
+    <div class="px-3 py-2 border-top" id="message-box">
+        <form id="message-form">
+            <input type="hidden" name="discussion_id" value="{{ discussion.id }}">
+            <div class="hstack gap-2 align-items-end">
+                <div class="flex-grow-1">
+                    {# I decided to not display it from form because it would actually be more complex #}
+                    {# Also, we do not refresh page on message send so the error message wouldnt make it back #}
+                    {# And there are no potential error message that we would want to send back anyway #}
+                    <label for="message-text" class="visually-hidden">Message To Send</label>
+                    <textarea class="form-control mt-0"
+                              style="resize: none;"
+                              id="message-text"
+                              maxlength="5000"
+                              rows="1"
+                              placeholder="Type a message..."></textarea>
+                </div>
+                <div class="flex-shrink-1">
+                    <button type="submit" class="btn btn-primary"
+                            id="send-message">
+                        <span id="send-message-text">Send</span>
+                        <span class="spinner-border spinner-border-sm text-light d-none"
+                              id="send-message-spinner"
+                              role="status"
+                              aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+{% endif %}

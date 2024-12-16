@@ -29,8 +29,7 @@ class Invite(models.Model):
 class InviteUse(models.Model):
     invite = models.ForeignKey(Invite, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    resulting_discussion = models.ForeignKey(Discussion,
-                                             on_delete=models.CASCADE)  # TODO: make discussion undeletable but rather archived (same for all models for that matter)
+    resulting_discussion = models.OneToOneField(Discussion, on_delete=models.CASCADE)
     used_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

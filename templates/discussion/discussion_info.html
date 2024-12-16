@@ -1,0 +1,49 @@
+<!-- Description: This template displays the information about a discussion. -->
+<div class="row">
+    <div class="col">
+        <p class="fw-bold">Debate</p>
+        <p><a href="{% url 'debate' discussion.debate.slug %}">{{ discussion.debate.title }}</a></p>
+    </div>
+    <div class="col">
+        <p class="fw-bold">Participants</p>
+        <p>
+            <a href="{% url 'account_profile' current_user.username %}">You</a>
+            {% if current_user.stance %}
+                (<span class="text-success">For</span>)
+            {% elif current_user.stance == False %}
+                (<span class="text-danger">Against</span>)
+            {% else %}
+                (<span class="text-muted">No Stance</span>)
+            {% endif %}
+            vs
+            <a href="{% url 'account_profile' other_user.username %}">{{ other_user.username }}</a>
+            {% if other_user.stance %}
+                (<span class="text-success">For</span>)
+            {% elif other_user.stance == False %}
+                (<span class="text-danger">Against</span>)
+            {% else %}
+                (<span class="text-muted">No Stance</span>)
+            {% endif %}
+        </p>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <p class="fw-bold">Created</p>
+        <p>{{ discussion.created_at }}</p>
+    </div>
+    <div class="col">
+        <p class="fw-bold">Archived?</p>
+        <p>{{ is_archived_for_current_user|yesno:'Yes,No' }}</p>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <p class="fw-bold">Number of Messages</p>
+        <p>{{ message_count }}</p>
+    </div>
+    <div class="col">
+        <p class="fw-bold">Matching Method</p>
+        <p>{{ invite|yesno:'Invitation,Platform Matching' }}</p>
+    </div>
+</div>

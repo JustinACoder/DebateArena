@@ -1,4 +1,5 @@
-<div hx-indicator="#notification-spinner">
+<div hx-indicator="#notification-spinner"
+     hx-on::after-swap="$(this).find('time.timeago').timeago();">
     {% if is_dropdown %}
         <h3 class="my-2 px-3">Notifications</h3>
     {% else %}
@@ -24,9 +25,5 @@
     <ul class="list-unstyled list-group"
         id="notification-list">
     </ul>
-    <div class="text-center my-2" id="notification-spinner">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
+    {% include 'common/spinner.html' with id='notification-spinner' %}
 </div>

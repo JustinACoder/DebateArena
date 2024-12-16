@@ -21,25 +21,16 @@ env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file
-env_file = os.path.join(BASE_DIR, ".env")
-environ.Env.read_env(env_file)
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# TODO: The .env file doesn't get pushed to github, so the SECRET_KEY is not available in the repository
-#  Therefore, we set a default value for the SECRET_KEY here
-#  However, this is not a good long term solution as we could forget to set .env in production
-#  It would also require us to set a default value for every environment variable in the code which is not ideal
-#  Therefore, we must search for better solutions to this problem in the future
-SECRET_KEY = env("SECRET_KEY", default="django-insecure$@&!")
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DEBUG", default="dev") == "dev"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = []  # TODO: Add allowed hosts such as the domain name of the website
 
 INSTALLED_APPS = [
     'daphne',
@@ -85,6 +76,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'notifications.middleware.NotificationMiddleware',
+    'discussion.middleware.MessageMiddleware'
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
@@ -115,8 +107,12 @@ WSGI_APPLICATION = 'ProjectOpenDebate.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env("DB_NAME"),
+        'USER': env("DB_USER"),
+        'PASSWORD': env("DB_PASSWORD"),
+        'HOST': env("DB_HOST"),
+        'PORT': env("DB_PORT"),
     }
 }
 
@@ -125,7 +121,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
-    # Change to redis layer for production
+    # TODO: Change to redis layer for production
 }
 
 # Password validation
@@ -159,6 +155,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # In addition to the default static files directory (one in each app), we also have a global static files directory
 # This directory is used for global static files, such as CSS files that are used across multiple apps
@@ -188,12 +185,6 @@ ACCOUNT_FORMS = {
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # TODO: Change to real email backend in production
 EMAIL_SUBJECT_PREFIX = '[DebateArena] '
 DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
-
-# Pagination settings
-ENDLESS_PAGINATION_SETTINGS = {
-    'FIRST_PAGE_SIZE': 50,  # The size of the first page of a paginated list
-    'PAGE_SIZE': 30,  # The size of the rest of the pages
-}
 
 # Admins
 ADMINS = [

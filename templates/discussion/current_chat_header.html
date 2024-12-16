@@ -1,0 +1,102 @@
+<div class="hstack justify-content-between align-items-stretch p-2 shadow-sm z-1 gap-2">
+    <a href="javascript:void(0)" role="button" class="fs-4 text-dark d-grid h-100 d-grid d-md-none lh-1"
+       data-bs-toggle="offcanvas"
+       style="aspect-ratio: 1/1; place-items: center;"
+       data-bs-target="#chat-list-canvas" aria-controls="chat-list-canvas">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <div class="vstack gap-1">
+        <h1 class="fs-5 mb-0 lh-1 fw-bold">
+            {{ discussion.debate.title }}{{ is_archived_for_current_user|yesno:' (Archived),' }}</h1>
+        <span class="text-secondary small lh-1">with <span
+                id="discussion-partner-username">{% if discussion.participant1 == request.user %}
+            {{ discussion.participant2.username }}{% else %}
+            {{ discussion.participant1.username }}{% endif %}</span></span>
+    </div>
+    <div class="dropdown">
+        <button type="button" id="discussion-settings"
+                class="fs-4 text-dark d-grid h-100 lh-1 bg-transparent border-0"
+                style="aspect-ratio: 1/1; place-items: center;"
+                data-bs-toggle="dropdown">
+            <i class="bi bi-gear"></i>
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="discussion-settings">
+            <li>
+                <button class="dropdown-item" type="button" data-bs-toggle="modal"
+                        data-bs-target="#information-modal"
+                        hx-get="{% url 'get_discussion_info' discussion.id %}"
+                        hx-trigger="click"
+                        hx-target="#info-content"
+                        hx-indicator="#info-spinner">Information
+                </button>
+            </li>
+            <li>
+                <button class="dropdown-item text-danger" type="button" data-bs-toggle="modal"
+                        data-bs-target="#archive-discussion-modal">{{ is_archived_for_current_user|yesno:'Unarchive,Archive' }}
+                    Discussion
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{# Information modal #}
+<div class="modal" id="information-modal" tabindex="-1" aria-labelledby="information-modal-label"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="information-modal-label">Discussion Information</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="info-content">
+
+                </div>
+                {% include 'common/spinner.html' with id='info-spinner' %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Archive modal #}
+<div class="modal" id="archive-discussion-modal" tabindex="-1"
+     aria-labelledby="archive-discussion-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"
+                    id="archive-discussion-modal-label">{{ is_archived_for_current_user|yesno:'Unarchive,Archive' }}
+                    Discussion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-start">
+                {% if is_archived_for_current_user %}
+                    Are you sure you want to unarchive this discussion? You will start receiving
+                    notifications again, and it will be visible in the active discussions list.
+                {% else %}
+                    Are you sure you want to archive this discussion? You will no longer receive
+                    notifications for this discussion, and it will be visible in the archived
+                    discussions
+                    list. You can always unarchive it later.
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel
+                </button>
+                <form action="{% url 'set_archive_status' discussion.id %}"
+                      method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="status"
+                           value="{{ is_archived_for_current_user|yesno:'false,true' }}">
+                    <button type="submit"
+                            class="btn btn-danger">{{ is_archived_for_current_user|yesno:'Unarchive,Archive' }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

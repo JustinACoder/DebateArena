@@ -1,188 +1,302 @@
-from django.conf import settings
-from django.contrib.auth.models import User
-from django.db.models import Q, Window, F, BooleanField, When, Case, Value, TextField, OuterRef, Subquery
+from datetime import timedelta, datetime
+
+from django.core.paginator import Paginator
+from django.db.models import Q, F, BooleanField, When, Case, Value, Window, DateTimeField, Subquery, OuterRef
 from django.contrib.auth.decorators import login_required
-from django.db.models.functions import FirstValue, Coalesce
+from django.db.models.functions import Greatest
+from django.db.models.functions.window import Lag
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db import connection
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST
 
-from debate.models import Debate
+from ProjectOpenDebate.common.decorators import login_required_htmx
 from discussion.forms import MessageForm
-from discussion.models import Discussion, Message
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseBadRequest, HttpResponseNotFound
+from discussion.models import Discussion, Message, ReadCheckpoint
+from django.http import HttpResponseForbidden, HttpResponseNotFound
 
 
-def dictfetchall(cursor):
+def set_message_additional_fields(*messages):
     """
-    Return all rows from a cursor as a dict.
-    Assume the column names are unique.
+    Adds additional fields to the messages. The additional fields are:
+    - first_of_group: A boolean indicating whether the message is the first message in a group of messages that were
+        sent within a 20-minute window.
+    - formatted_datetime: A string representing the formatted datetime of the message. The format is as follows:
+        - If the message was sent today, the time will be shown: "hh:mm"
+        - If the message was sent in the last 6 days, the day of the week will be shown: "Mon hh:mm"
+        - Otherwise, the full date will be shown: "Apr 1, 2021 hh:mm"
 
-    Source: https://docs.djangoproject.com/en/5.0/topics/db/sql/
+    Note: If messages is a queryset, it will be evaluated by calling this function
+
+    :param messages: Message instances
+    :return: None
     """
-    columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    # TODO: ensure that the timezone is correct
+    current_date = datetime.now().date()
+    twenty_minutes = timedelta(minutes=20)
+
+    for message in messages:
+        # Set the first_of_group flag
+        message.first_of_group = message.prev_message_created_at is None or message.created_at - message.prev_message_created_at > twenty_minutes
+
+        # Set the formatted datetime
+        message_date = message.created_at.date()
+        if message_date == current_date:
+            message.formatted_datetime = message.created_at.strftime('%H:%M')
+        elif current_date - timedelta(days=6) < message_date:
+            message.formatted_datetime = message.created_at.strftime('%a %H:%M')
+        else:
+            message.formatted_datetime = message.created_at.strftime('%b %d, %Y %H:%M')
+
+
+def get_most_recent_discussions_queryset(user, discussions_type='all'):
+    """
+    Get a queryset with the most recent discussions for the user. A discussion datetime is the maximum datetime
+    between the discussion creation datetime and the most recent message datetime if the discussion has messages.
+
+    :param user: User instance
+    :param discussions_type: 'all', 'active' or 'archived' to filter the discussions accordingly
+    :return: Queryset of discussions with the most recent datetime
+    """
+    # Both of the subqueries should be fast since they are indexed
+    latest_message = Message.objects.filter(discussion=OuterRef('pk')).order_by('-created_at')[:1]
+    readcheckpoint = ReadCheckpoint.objects.filter(discussion=OuterRef('pk'), user=user)[:1]
+
+    # Filter the discussions based on the type
+    if discussions_type == 'active':
+        discussions_filter = ((Q(is_archived_for_p1=False) & Q(participant1=user)) |
+                              Q(is_archived_for_p2=False) & Q(participant2=user))
+    elif discussions_type == 'archived':
+        discussions_filter = ((Q(is_archived_for_p1=True) & Q(participant1=user)) |
+                              Q(is_archived_for_p2=True) & Q(participant2=user))
+    elif discussions_type == 'all':
+        discussions_filter = Q()
+    else:
+        return Discussion.objects.none()
+
+    return Discussion.objects.filter(
+        Q(participant1=user) | Q(participant2=user),
+        discussions_filter
+    ).annotate(
+        latest_message_text=Subquery(latest_message.values('text')),
+        latest_message_created_at=Subquery(latest_message.values('created_at')),
+        latest_message_author=Subquery(latest_message.values('author__username')),
+    ).annotate(
+        recent_date=Greatest(
+            'created_at',
+            F('latest_message_created_at')
+        ),
+        # Check if the latest message is the same message pointed by the current user's readcheckpoint for the discussion
+        has_unread_messages=Case(
+            When(
+                latest_message_created_at__gt=Subquery(
+                    readcheckpoint.values('last_message_read__created_at')
+                ),
+                then=Value(True)
+            ),
+            default=Value(False),
+            output_field=BooleanField()
+        )
+    ).select_related('debate', 'inviteuse').order_by('-recent_date')
 
 
 @login_required
 def discussion_default(request):
-    # Get the most recent discussion for the current user
-    # most_recent_discussion_id = (Message.objects.filter(
-    #     Q(discussion__participant1=request.user) | Q(discussion__participant2=request.user)
-    # ).order_by('-created_at').values_list('discussion_id', flat=True).first())
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT dd.id
-            FROM discussion_discussion dd
-                     LEFT JOIN discussion_message dm ON dd.id = dm.discussion_id
-            WHERE dd.participant1_id = %s OR dd.participant2_id = %s
-            ORDER BY COALESCE(dm.created_at, dd.created_at) DESC
-            LIMIT 1;
-            """,
-            [request.user.id, request.user.id]
-        )
-        result = cursor.fetchone()
-        most_recent_discussion_id = result[0] if result else None
+    # Get the most recent active discussion
+    most_recent_discussion = get_most_recent_discussions_queryset(request.user, 'active').first()
 
-    return specific_discussion(request, most_recent_discussion_id)
+    if most_recent_discussion:
+        return redirect('specific_discussion', discussion_id=most_recent_discussion.id)
+    else:
+        return render(request, 'discussion/discussion_board.html',
+                      {'message_form': MessageForm(), 'discussion_id': None})
 
 
 @login_required
 def specific_discussion(request, discussion_id):
-    # The problem with the orm query is that I can't find a clear AND efficient way of getting both
-    # the conversations with and without messages with the rest of the information.
-    # The commented out orm query below is the closest I got. It retrieves all discussions with the most recent
-    # message, but it doesn't retrieve discussions without messages.
-    # I tried using union, but it doesn't work well since it changes the order of the fields.
-    # discussions_info = (
-    #     Message.objects.filter(
-    #         Q(discussion__participant1=request.user) | Q(discussion__participant2=request.user)
-    #     ).annotate(
-    #         latest_message=Window(
-    #             expression=FirstValue('id'),
-    #             partition_by=[F('discussion_id')],
-    #             order_by=['-created_at']
-    #         )
-    #     ).filter(
-    #         latest_message=F('id')
-    #     ).values(
-    #         'discussion_id', 'discussion__debate__title', 'discussion__participant1__username',
-    #         'discussion__participant2__username', 'text', 'created_at'
-    #     ).order_by('-created_at')
-    # )
+    # If the current user is not a participant in the discussion, return 403
+    if not Discussion.objects.filter(
+            Q(participant1=request.user) | Q(participant2=request.user), pk=discussion_id).exists():
+        return HttpResponseForbidden()
 
-    # Get discussions with the most recent message or without messages
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT *
-            FROM (SELECT dd.id                                                                               as discussion_id,
-                         dd.debate_id                                                                        as debate_id,
-                         db.title                                                                            as debate_title,
-                         dd.created_at                                                                       as discussion_created_at,
-                         dm.id                                                                               as message_id,
-                         dm.text                                                                             as message_text,
-                         dm.created_at                                                                       as message_created_at,
-                         p1.username                                                                         as participant1_username,
-                         p2.username                                                                         as participant2_username,
-                         p1.id                                                                               as participant1_id,
-                         p2.id                                                                               as participant2_id,
-                         FIRST_VALUE(dm.id) OVER (PARTITION BY dm.discussion_id ORDER BY dm.created_at DESC) as first_message_id,
-                         COALESCE(dm.created_at, dd.created_at)                                              as latest_activity_at
-                  FROM discussion_discussion dd
-                           JOIN auth_user p1 ON dd.participant1_id = p1.id
-                           JOIN auth_user p2 ON dd.participant2_id = p2.id
-                           LEFT JOIN discussion_message dm ON dd.id = dm.discussion_id
-                           JOIN debate_debate db ON dd.debate_id = db.id
-                  WHERE (dd.participant1_id = %s OR dd.participant2_id = %s)) as sub
-            WHERE message_id = first_message_id
-               OR first_message_id IS NULL
-            ORDER BY latest_activity_at DESC;
-            """,
-            [request.user.id, request.user.id]
-        )
-        discussions_info = dictfetchall(cursor)
+    # Determine if the discussion is archived for the current user
+    is_archived_for_current_user = Discussion.objects.get(pk=discussion_id).is_archived_for(request.user)
 
-    # If this view is called with a discussion_id but the query is empty, it means that the discussion doesn't exist
-    # OR the user is not a participant. Therefore, we will redirect to the default discussion view.
-    if not discussions_info and discussion_id:
-        return redirect('discussion_default')  # TODO: should we return an error instead?
-
-    # Get Message form
-    message_form = MessageForm()
-
-    # Create context
     context = {
-        'discussions_info': discussions_info,
-        'message_form': message_form,
+        'message_form': MessageForm(),
+        'is_archived_for_current_user': is_archived_for_current_user,
         'discussion_id': discussion_id
     }
 
     return render(request, 'discussion/discussion_board.html', context=context)
 
 
-@login_required
-@require_GET
-def retrieve_messages(request, discussion_id):
-    # Note: I decided not to use Paginator or django-el-pagination for this since it is pretty simple and would be
-    # more complex to implement with those tools.
+@login_required_htmx
+def get_discussion_page(request):
+    discussions_tab = request.GET.get('tab', 'active').lower()
+    discussions_queryset = get_most_recent_discussions_queryset(request.user, discussions_tab)
 
-    # Get page number and determine if the user wants discussion info
-    page = request.GET.get('page', '1')  # Starts at 1
-    include_discussion_info = request.GET.get('include_discussion_info', 'false')
+    # Get the page
+    paginator = Paginator(discussions_queryset, 15)
+    page = paginator.get_page(request.GET.get('page', '1'))
 
-    # Ensure that the values are valid
-    if not page.isdigit() or not include_discussion_info in ['true', 'false']:
-        return HttpResponseBadRequest()
+    return render(request, 'discussion/discussion_list_page.html', {'page': page, 'tab': discussions_tab})
 
-    page = int(page)
-    include_discussion_info = include_discussion_info == 'true'
 
-    # From the page number, calculate the start (inclusive) and end (exclusive) indexes
-    first_page_size = settings.ENDLESS_PAGINATION_SETTINGS['FIRST_PAGE_SIZE']
-    other_page_size = settings.ENDLESS_PAGINATION_SETTINGS['PAGE_SIZE']
-    if page == 1:
-        start = 0
-        end = first_page_size
-    else:
-        start = first_page_size + (page - 2) * other_page_size
-        end = start + other_page_size
-
-    # Get messages and discussion info
+@login_required_htmx
+def get_current_chat_page(request, discussion_id):
+    # Get the discussion
     discussion_instance = get_object_or_404(
         Discussion.objects  # TODO: should we return 403 if the user is not a participant?
         .filter(Q(participant1=request.user) | Q(participant2=request.user))
-        .prefetch_related('message_set')
+        .prefetch_related('message_set', 'readcheckpoint_set')
         .select_related('debate', 'participant1', 'participant2'), pk=discussion_id)
-    messages = (discussion_instance.message_set.order_by('-created_at').annotate(
+
+    # Check if the conversation should be marked as archived for the current user
+    is_archived_for_current_user = discussion_instance.is_archived_for(request.user)
+
+    # Get the read checkpoint for the other user (we want to see which messages they have read)
+    # We don't have to check for None since it is guaranteed that there is a read checkpoint for the other user
+    read_checkpoint = discussion_instance.readcheckpoint_set.exclude(user=request.user).first()
+
+    # Get the messages
+    messages = discussion_instance.message_set.order_by('-created_at').annotate(
         is_current_user=Case(
             When(author=request.user, then=Value(True)),
             default=Value(False),
             output_field=BooleanField()
         )
-    ).values('id', 'author__username', 'text', 'created_at', 'is_current_user'))
+    )
 
-    # Initialize response data
-    # To determine if there is a next page, we try to get one more message than the page size
-    # If we retrieve page size + 1 messages, there is a next page, otherwise there isn't
-    # If there is a next page, we remove the last message from the results since it belongs to the next page
-    # Otherwise, we return all the messages since they all belong to the current page
-    results = list(messages[start:end + 1])
-    expected_message_count = end - start + 1
-    has_next = len(results) == expected_message_count
-    messages_to_return = results[:-1] if has_next else results
-    data = {'messages': messages_to_return, 'has_next': has_next}
+    # Add annotations for detecting group changes based on time differences
+    messages = messages.annotate(
+        # Get the timestamp of the previous message in the window
+        prev_message_created_at=Window(
+            expression=Lag('created_at', offset=1),
+            order_by=F('created_at').asc(),
+            output_field=DateTimeField()
+        )
+    )
 
-    # If the user wants discussion info, include it in the response
-    if include_discussion_info:
-        data['discussion'] = {
-            'id': discussion_instance.id,
-            'debate': discussion_instance.debate.title,
-            'participants': [
-                {'id': discussion_instance.participant1_id, 'username': discussion_instance.participant1.username},
-                {'id': discussion_instance.participant2_id, 'username': discussion_instance.participant2.username},
-            ],
-        }
+    # Create the paginator
+    paginator = Paginator(messages, 30)
+    page = paginator.get_page(request.GET.get('page', '1'))
 
-    return JsonResponse(data)
+    # Add the additional fields (first_of_group, formatted_datetime) to the messages
+    # This will be used to add time separators in the chat
+    # TODO: should we do this on client side somehow? Or is there a cleaner way?
+    #       This logic is also weirdly replicated in the consumer
+    set_message_additional_fields(*page.object_list)
+
+    context = {
+        'page': page,
+        'discussion': discussion_instance,
+        'is_archived_for_current_user': is_archived_for_current_user,
+        'read_checkpoint': read_checkpoint,
+    }
+
+    return render(request, 'discussion/current_chat_page.html', context)
+
+
+@login_required_htmx
+def get_single_discussion(request):
+    # Get the discussion id
+    discussion_id = request.GET.get('discussion_id')
+
+    # Get the discussion (active or archived)
+    discussion_instance = get_most_recent_discussions_queryset(request.user).filter(pk=discussion_id).first()
+
+    if discussion_instance is None:
+        return HttpResponseNotFound()
+
+    return render(request, 'discussion/discussion.html', {'discussion': discussion_instance})
+
+
+@login_required
+@require_POST
+def set_archive_status(request, discussion_id):
+    # Get the discussion
+    discussion_instance = get_object_or_404(
+        Discussion.objects.filter(Q(participant1=request.user) | Q(participant2=request.user)), pk=discussion_id)
+
+    # Get the archive status
+    archive_status = request.POST.get('status', 'true').lower() == 'true'
+
+    # Set the archive status
+    if request.user == discussion_instance.participant1:
+        discussion_instance.is_archived_for_p1 = archive_status
+    else:
+        discussion_instance.is_archived_for_p2 = archive_status
+
+    discussion_instance.save()
+
+    # Redirect to the discussion that we have just archived
+    return redirect('specific_discussion', discussion_id=discussion_id)
+
+
+def create_discussion_and_readcheckpoints(debate, participant1, participant2):
+    # Create a discussion
+    discussion_instance = Discussion.objects.create(
+        debate=debate,
+        participant1=participant1,
+        participant2=participant2
+    )
+
+    # Create ReadCheckpoints for both participants of the discussion
+    discussion_instance.create_read_checkpoints()
+
+    return discussion_instance
+
+
+@login_required
+def get_discussion_info(request, discussion_id):
+    """
+    Get information on the discussion to be displayed to the user upon request.
+    The info returned includes:
+    - Debate object
+    - The participants and their stance
+    - The number of messages in the discussion
+    - Discussion object
+    - Origin of the discussion (through an invitation or the platform matchmaking)
+    - Whether the discussion is archived for the current user
+
+    :param discussion_id: The id of the discussion to get information about
+    :param request: The request object
+    :return: The rendered response
+    """
+    # Get the discussion
+    discussion_instance = get_object_or_404(
+        Discussion.objects.filter(
+            Q(participant1=request.user) | Q(participant2=request.user)
+        ).select_related('participant1', 'participant2', 'debate', 'inviteuse'), pk=discussion_id)
+
+    # Get the debate
+    debate_instance = discussion_instance.debate
+
+    # Get the participants and their stance
+    if request.user == discussion_instance.participant1:
+        current_user = discussion_instance.participant1
+        other_user = discussion_instance.participant2
+    else:
+        current_user = discussion_instance.participant2
+        other_user = discussion_instance.participant1
+    current_user.stance = debate_instance.get_stance(current_user)
+    other_user.stance = debate_instance.get_stance(other_user)
+
+    # Get the number of messages in the discussion
+    message_count = discussion_instance.message_set.count()
+
+    # Get the origin of the discussion
+    invite_instance = discussion_instance.inviteuse.invite if discussion_instance.is_from_invite else None
+
+    # Check if the conversation should be marked as archived for the current user
+    is_archived_for_current_user = discussion_instance.is_archived_for(request.user)
+
+    context = {
+        'message_count': message_count,
+        'discussion': discussion_instance,
+        'current_user': current_user,
+        'other_user': other_user,
+        'invite': invite_instance,
+        'is_archived_for_current_user': is_archived_for_current_user
+    }
+
+    return render(request, 'discussion/discussion_info.html', context)
