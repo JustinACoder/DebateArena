@@ -5,6 +5,7 @@
 __pycache__
 db.sqlite3
 media
+staticfiles
 
 # Backup files #
 *.bak
@@ -137,6 +138,9 @@ GitHub.sublime-settings
 !.vscode/launch.json
 !.vscode/extensions.json
 .history
+
+# Hide idea completely
+.idea
 
 # django related
 staticfiles/

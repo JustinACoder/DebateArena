@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import OuterRef, Subquery, F, Exists, Count, Case, When
 from django.shortcuts import render, get_object_or_404, redirect
@@ -20,12 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 def explore(request):
+    limit = 10
     sections = [
-        ('Trending', Debate.objects.get_trending()[:10]),
-        ('Popular', Debate.objects.get_popular()[:10]),
-        ('Recent', Debate.objects.get_recent()[:10]),
-        ('Controversial', Debate.objects.get_controversial()[:10]),
-        ('Other', Debate.objects.get_random()[:10])
+        ('Trending', Debate.objects.get_trending().with_stance(request.user)[:limit]),
+        ('Popular', Debate.objects.get_popular().with_stance(request.user)[:limit]),
+        ('Recent', Debate.objects.get_recent().with_stance(request.user)[:limit]),
+        ('Controversial', Debate.objects.get_controversial().with_stance(request.user)[:limit]),
+        ('Other', Debate.objects.get_random().with_stance(request.user)[:limit])
     ]
 
     context = {
@@ -107,7 +109,7 @@ def debate(request, debate_slug):
         comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
 
     # Get suggestions for the user
-    suggested_debates = Debate.objects.get_random().exclude(id=debate_instance.id)[:10]
+    suggested_debates = Debate.objects.get_random().exclude(id=debate_instance.id).with_stance(request.user)[:10]
 
     # Define the context to be passed to the template
     context = {
@@ -257,7 +259,26 @@ def vote(request, debate_slug):
     return JsonResponse(new_score_dict)
 
 
-@require_POST
 def search(request):
-    # TODO: implement search functionality (which requires at least full-text search which is not supported by SQLite)
-    return HttpResponse('Not implemented', status=501)
+    # Get the search query
+    search_query = request.GET.get('search_query')
+
+    if not search_query:
+        return redirect('debate_explore')
+
+    # Get the debates that match the search query
+    search_results = Debate.objects.search(search_query).with_stance(request.user)
+
+    # Paginate the search results
+    paginator = Paginator(search_results, 10)
+    page_number = request.GET.get('page', 1)
+    page = paginator.get_page(page_number)
+
+    # Define the context to be passed to the template
+    context = {
+        'search_query': search_query,
+        'page': page,
+        'include_footer': True
+    }
+
+    return render(request, 'debate/search_results.html', context)

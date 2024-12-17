@@ -111,7 +111,7 @@
                 </button>
                 <div class="my-4 py-4 rounded bg-primary-subtle">
                     <h3 class="w-100 text-center mb-4">Participate in the Debate</h3>
-                    <div class="row justify-content-center align-items-center">
+                    <div class="row justify-content-center align-items-center g-3">
                         <div class="col-auto">
                             <button class="btn btn-primary" type="button" data-bs-toggle="modal"
                                     data-bs-target="#set-stance-modal">
@@ -309,7 +309,12 @@
                 {% include 'debate/components/comments.html' %}
             </div>
             <div class="col-lg-4 col-xl-3">
-                {% include 'debate/components/debate_related.html' %}
+                <h2 class="mb-2">Suggestions</h2>
+                <div class="grid-cards gap-4">
+                    {% for debate in suggested_debates %}
+                        {% include 'debate/components/debate_preview.html' with debate=debate stance=debate.user_stance %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
