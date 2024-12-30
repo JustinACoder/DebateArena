@@ -12,8 +12,7 @@ class PairingRequestManager(models.Manager):
         return super().get_queryset().annotate(
             is_expired=(
                 Q(status=PairingRequest.Status.ACTIVE) &
-                Q((datetime.now() - F('last_keepalive_ping')) > timedelta(
-                    seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
+                Q(last_keepalive_ping__lt=datetime.now() - timedelta(seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
             )
         )
 

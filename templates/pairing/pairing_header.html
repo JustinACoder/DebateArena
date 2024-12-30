@@ -1,0 +1,11 @@
+<div class="pairing-banner d-flex align-items-center justify-content-between shadow-sm px-3 w-100 position-fixed text-light z-3">
+    <div class="hstack gap-3">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span class="m-0 d-none d-sm-inline">Waiting for a debater on <strong>{{ debate.title|default:"Default Debate Title" }}</strong></span>
+        <span class="m-0 d-inline d-sm-none">Searching...</span>
+        <span class="elapsed-time">00:00</span>
+    </div>
+    <button class="btn btn-link p-0 ms-3 text-light" aria-label="Cancel" onclick="cancelPairing()">
+        <i class="bi bi-x fs-3"></i>
+    </button>
+</div>

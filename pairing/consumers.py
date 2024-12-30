@@ -2,8 +2,10 @@ import asyncio
 
 from channels.db import database_sync_to_async
 from django.db import transaction
+from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
+from debate.models import Debate
 from discussion.views import create_discussion_and_readcheckpoints
 from pairing.models import PairingRequest, PairingMatch
 
@@ -225,20 +227,25 @@ class PairingConsumer(CustomBaseConsumer):
         for pairing_request in [pairing_request_1, pairing_request_2]:
             await self.redirect(pairing_request.user_id, 'specific_discussion', discussion_id=discussion.id)
 
-    @transaction.atomic
     async def request_pairing(self, user, debate_id):
         """
         Requests a pairing for the user in the specified debate.
         """
-        # Check if the user already has an active pairing request
-        pairing_request = await database_sync_to_async(PairingRequest.objects.get_current_request)(user)
+        debate = await Debate.objects.filter(id=debate_id).first()
 
-        if pairing_request:
-            await self.send_json({'status': 'error', 'message': 'You already have an active pairing request'})
-            return
+        with transaction.atomic():
+            # Check if the user already has an active pairing request
+            pairing_request = await database_sync_to_async(PairingRequest.objects.get_current_request)(user)
 
-        # Create the pairing request
-        await PairingRequest.objects.acreate(user=user, debate_id=debate_id)
+            if pairing_request:
+                await self.send_json({'status': 'error', 'message': 'You already have an active pairing request'})
+                return
+
+            # Create the pairing request
+            await PairingRequest.objects.acreate(user=user, debate=debate)
+
+        # Get the pairing request ID
+        html = render_to_string('pairing/pairing_header.html', {'debate': debate})
 
         # Notify the user that the pairing request has been created
         await self.channel_layer.group_send(
@@ -247,6 +254,9 @@ class PairingConsumer(CustomBaseConsumer):
                 'status': 'success',
                 'type': 'send.json',
                 'event_type': 'request_pairing',
+                'data': {
+                    'html': html
+                }
             }
         )
 
