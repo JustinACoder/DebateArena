@@ -1,6 +1,6 @@
 .pairing-banner {
-    height: 60px;
-    top: var(--nav-height);
+    height: var(--pairing-banner-height);
+    top: var(--total-header-height);
     background: linear-gradient(106deg, var(--bs-primary) 30%, rgba(9,170,232,1) 45%, rgba(160,200,220,1) 50%, rgba(88,206,245,1) 54%, var(--bs-primary) 70%);
     background-size: 200%;
     background-position-x: 100%;
