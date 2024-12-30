@@ -1,12 +1,18 @@
+const WS_CONNECT_MAX_RETRIES = 5;
+
 class WebSocketManager {
     constructor() {
         this.socket = null;
         this.handlers = {};
         this.messageQueue = [];  // Queue to hold messages until connection is ready
         this.isConnected = false;
+
+        if (!("WebSocket" in window)) {
+            $.toast('error', 'Your browser does not support WebSockets. Please upgrade to a modern browser.', false);
+        }
     }
 
-    connect() {
+    connect(num_retries = WS_CONNECT_MAX_RETRIES) {
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         this.socket = new WebSocket(`${protocol}://${window.location.host}/ws/`);
 
@@ -21,17 +27,28 @@ class WebSocketManager {
         this.socket.onmessage = this.on_message.bind(this);
 
         // Handle connection close or error by resetting the connection state
-        this.socket.onclose = () => {
+        this.socket.onclose = (event) => {
             this.isConnected = false;
-            // TODO: reconnection logic?
-            $.toast('error', 'Websocket connection closed. Please refresh the page', false);
+            console.error('Websocket connection closed:', event);
+            this.reconnect(num_retries);
         };
 
-        this.socket.onerror = () => {
+        this.socket.onerror = (event) => {
             this.isConnected = false;
-            // TODO: reconnection logic?
-            $.toast('error', 'Error connecting to the websocket server', false);
+            console.error('Websocket connection error:', event);
+            this.reconnect(num_retries);
         };
+    }
+
+    reconnect(num_retries) {
+        if (num_retries > 0) {
+            setTimeout(() => {
+                $.toast('warning', 'Disconnected. Reconnecting...', true, 2000);
+                this.connect(num_retries - 1);
+            }, 3000);
+        } else {
+            $.toast('error', 'Could not connect to the websocket server. Please refresh the page and contact support if the issue persists.', false);
+        }
     }
 
     add_handler(stream, event_type, handler) {
@@ -48,6 +65,10 @@ class WebSocketManager {
         let wsMessage = JSON.parse(event.data);
         let payload = wsMessage['payload'];
 
+        if (payload['event_type'] === 'redirect') {
+            window.location.href = payload['data']['url'];
+        }
+
         if (payload['status'] === 'error') {
             $.toast('error', `Error websocket status (${payload['event_type']}): ${payload['message']}`, false);
             return;
@@ -57,7 +78,7 @@ class WebSocketManager {
         if (handler_key in this.handlers) {
             let handlers_for_key = this.handlers[handler_key];
             for (let handler of handlers_for_key) {
-                handler(payload['data']);
+                handler(payload['data'] ?? {});
             }
         } else {
             console.log(`No handler for ${handler_key}, the available handlers are: ${Object.keys(this.handlers)}`);
