@@ -14,6 +14,7 @@ from channels.auth import AuthMiddlewareStack
 from django.urls import re_path
 
 from discussion.consumers import DiscussionConsumer
+from pairing.consumers import PairingConsumer
 from notifications.consumers import NotificationConsumer
 from .demultiplexer import AsyncJsonWebsocketDemultiplexer
 
@@ -26,6 +27,7 @@ application = ProtocolTypeRouter({
             re_path("^ws/$", AsyncJsonWebsocketDemultiplexer.as_asgi(
                 discussion=DiscussionConsumer.as_asgi(),
                 notification=NotificationConsumer.as_asgi(),
+                pairing=PairingConsumer.as_asgi(),
             ))
         ])
     ),

@@ -76,7 +76,8 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'notifications.middleware.NotificationMiddleware',
-    'discussion.middleware.MessageMiddleware'
+    'discussion.middleware.MessageMiddleware',
+    'pairing.middleware.PairingMiddleware'
 ]
 
 ROOT_URLCONF = 'ProjectOpenDebate.urls'
@@ -190,3 +191,7 @@ DEFAULT_FROM_EMAIL = 'noreply@debatearena.com'
 ADMINS = [
     ('Admin', env("ADMIN_EMAIL", default="admin@gmail.com"))
 ]
+
+# Pairing settings
+PAIRING_KEEPALIVE_INTERVAL = 30  # seconds
+PAIRING_REQUEST_EXPIRY_SECONDS = 60  # seconds

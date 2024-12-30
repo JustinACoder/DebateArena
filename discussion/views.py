@@ -233,6 +233,26 @@ def set_archive_status(request, discussion_id):
 
 
 def create_discussion_and_readcheckpoints(debate, participant1, participant2):
+    """
+    Create a discussion between the two participants and create ReadCheckpoints for both participants.
+
+    :param debate: The debate for the discussion (Debate instance or id)
+    :param participant1: The first participant (User instance or id)
+    :param participant2: The second participant (User instance or id)
+    :return: The created discussion instance
+    """
+    # Generate the args for the discussion
+    # Add the _id suffix to the arguments to avoid unnecessary queries
+    # if the parameters are ints (which represent the ids)
+    args = {
+        'debate': debate,
+        'participant1': participant1,
+        'participant2': participant2
+    }
+    for key, value in args.items():
+        if isinstance(value, int):
+            args[key] = value
+
     # Create a discussion
     discussion_instance = Discussion.objects.create(
         debate=debate,
