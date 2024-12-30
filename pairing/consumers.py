@@ -63,7 +63,7 @@ class PairingConsumer(CustomBaseConsumer):
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid event_type'})
 
-    async def get_pairing_request(self, user, for_update=False, select_related=None):
+    async def get_pairing_request(self, user, for_update=False):
         """
         Gets the active pairing request for the user.
         """
@@ -75,7 +75,7 @@ class PairingConsumer(CustomBaseConsumer):
 
         return pairing_request
 
-    async def wait_then_pair(self, pairing_request_1, pairing_request_2):
+    async def wait_then_pair(self, pairing_match):
         """
         Waits for a few seconds before completing the pairing.
         """
@@ -83,21 +83,13 @@ class PairingConsumer(CustomBaseConsumer):
             await asyncio.sleep(3.5)
 
             with transaction.atomic():
-                # Mark the pairing requests as paired
-                await database_sync_to_async(pairing_request_1.switch_status)(PairingRequest.Status.PAIRED)
-                await database_sync_to_async(pairing_request_2.switch_status)(PairingRequest.Status.PAIRED)
+                # Get the pairing requests
+                pairing_match.aselect_related('pairing_request_1', 'pairing_request_2')
 
-                discussion = await database_sync_to_async(create_discussion_and_readcheckpoints)(
-                    debate=pairing_request_1.debate_id,
-                    participant1=pairing_request_1.user_id,
-                    participant2=pairing_request_2.user_id,
-                )
-
-                # No need to add to live discussion list since we will redirect the user to the discussion
-                # which will automatically add the discussion to the live discussion list
+                await database_sync_to_async(pairing_match.complete_pairing)()
 
                 # Notify the users that the pairing has been completed
-                await self.notify_paired_redirect(pairing_request_1, pairing_request_2, discussion)
+                await self.notify_paired_redirect(pairing_match)
 
         except asyncio.CancelledError:
             return
@@ -220,12 +212,12 @@ class PairingConsumer(CustomBaseConsumer):
             }
         )
 
-    async def notify_paired_redirect(self, pairing_request_1, pairing_request_2, discussion):
+    async def notify_paired_redirect(self, pairing_match):
         """
         Notifies the users that the pairing has been completed and redirects them to the discussion.
         """
-        for pairing_request in [pairing_request_1, pairing_request_2]:
-            await self.redirect(pairing_request.user_id, 'specific_discussion', discussion_id=discussion.id)
+        for pairing_request in [pairing_match.pairing_request_1, pairing_match.pairing_request_2]:
+            await self.redirect(pairing_request.user_id, 'specific_discussion', discussion_id=pairing_match.related_discussion_id)
 
     async def request_pairing(self, user, debate_id):
         """

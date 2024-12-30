@@ -249,16 +249,10 @@ def create_discussion_and_readcheckpoints(debate, participant1, participant2):
         'participant1': participant1,
         'participant2': participant2
     }
-    for key, value in args.items():
-        if isinstance(value, int):
-            args[key] = value
+    args = {key + '_id' if isinstance(value, int) else key: value for key, value in args.items()}
 
     # Create a discussion
-    discussion_instance = Discussion.objects.create(
-        debate=debate,
-        participant1=participant1,
-        participant2=participant2
-    )
+    discussion_instance = Discussion.objects.create(**args)
 
     # Create ReadCheckpoints for both participants of the discussion
     discussion_instance.create_read_checkpoints()
