@@ -44,7 +44,7 @@ class PairingRequest(models.Model):
 
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.IDLE)
+    status = models.CharField(max_length=25, choices=Status.choices, default=Status.IDLE)
     last_keepalive_ping = models.DateTimeField(auto_now_add=True)  # doesn't update on save, must be updated manually
     created_at = models.DateTimeField(auto_now_add=True)
 
