@@ -1,7 +1,9 @@
 let elapsedTimeElementsList = $();
+let keepaliveIntervalID;
+let timeIntervalID;
 
 $(document).ready(() => {
-    setInterval(() => {
+    timeIntervalID = setInterval(() => {
         elapsedTimeElementsList.each(function () {
             let secondsElapsed = parseInt($(this).data("seconds-elapsed"));
             $(this).data("seconds-elapsed", secondsElapsed + 1);
@@ -9,7 +11,12 @@ $(document).ready(() => {
         });
     }, 1000);
 
-    processNewElapsedTime($(".elapsed-time"));
+    // if the pairing banner is present, start the keepalive loop and process the new elapsed time elements
+    const pairingBanner = $("#pairing-banner");
+    if (pairingBanner.length) {
+        processNewElapsedTime(pairingBanner.find(".elapsed-time"));
+        startKeepaliveLoop();
+    }
 
     // Bind websocket handlers
     websocketManager.add_handler("pairing", "request_pairing", requestPairingHandler);
@@ -37,11 +44,15 @@ function formatSeconds(seconds) {
     return `${minutesString}:${secondsString}`;
 }
 
+function startKeepaliveLoop() {
+    keepaliveIntervalID = setInterval(websocketManager.pairing_keepalive, 10000); // TODO: To constant?
+}
 
 function requestPairingHandler(data) {
     const container = $("#pairing-banner-container");
     container.html(data["html"]);
     processNewElapsedTime(container.find(".elapsed-time"));
+    startKeepaliveLoop();
 }
 
 function startSearchHandler(data) {
@@ -62,6 +73,9 @@ function cancelPairingHandler(data) {
     } else {
         pairingBanner.removeClass("match-found");
     }
+
+    clearInterval(keepaliveIntervalID);
+    clearInterval(timeIntervalID);
 }
 
 function cancelPairing(buttonElement) {
@@ -74,8 +88,3 @@ function cancelPairing(buttonElement) {
 function requestPairing() {
     websocketManager.request_pairing();
 }
-
-
-
-
-
