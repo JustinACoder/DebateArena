@@ -6,7 +6,6 @@ from django.template.loader import render_to_string
 
 from ProjectOpenDebate.consumers import CustomBaseConsumer, get_user_group_name
 from debate.models import Debate
-from discussion.views import create_discussion_and_readcheckpoints
 from pairing.models import PairingRequest, PairingMatch
 
 
@@ -83,9 +82,6 @@ class PairingConsumer(CustomBaseConsumer):
             await asyncio.sleep(3.5)
 
             with transaction.atomic():
-                # Get the pairing requests
-                pairing_match.aselect_related('pairing_request_1', 'pairing_request_2')
-
                 await database_sync_to_async(pairing_match.complete_pairing)()
 
                 # Notify the users that the pairing has been completed
@@ -125,13 +121,32 @@ class PairingConsumer(CustomBaseConsumer):
                 pairing_match = await database_sync_to_async(PairingMatch.objects.create_match)(pairing_request,
                                                                                                 best_match)
 
-        # Outside the atomic block to
+        # Outside the atomic block
         if best_match:
             # Notify the users that a match has been found
             await self.notify_match_found(pairing_request, best_match)
 
             # Create the task
             self.wait_then_pair_coroutine = asyncio.create_task(self.wait_then_pair(pairing_match))
+        else:
+            await self.notify_start_search(pairing_request)
+
+    async def notify_start_search(self, pairing_request):
+        """
+        Notifies the user that the active search has started.
+        """
+        # Get the user group name
+        user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
+
+        # Notify the user that the active search has started
+        await self.channel_layer.group_send(
+            user_group_name,
+            {
+                'status': 'success',
+                'type': 'send.json',
+                'event_type': 'start_search',
+            }
+        )
 
     async def notify_match_found(self, pairing_request, best_match):
         """
@@ -165,16 +180,15 @@ class PairingConsumer(CustomBaseConsumer):
 
         # If the pairing request is active/idle, just delete it
         if pairing_request.status in [PairingRequest.Status.ACTIVE, PairingRequest.Status.IDLE]:
-            pairing_request.adelete()
             await self.notify_cancelled(pairing_request)
+            pairing_request.adelete()
             return
         # If the pairing request is in match found status, we need to cancel the match
         elif pairing_request.status == PairingRequest.Status.MATCH_FOUND:
             self.wait_then_pair_coroutine.cancel()
 
             # Retrieve the matched pairing request
-            pairing_match = await database_sync_to_async(pairing_request.pairingmatch)()
-            matched_pairing_request = await database_sync_to_async(pairing_match.get_other_request)(pairing_request)
+            matched_pairing_request = await database_sync_to_async(pairing_request.pairingmatch.get_other_request)(pairing_request)
 
             # Switch the status of the pairing request to active
             # Note: we know it is an active search since a passive search directly goes to paired status
@@ -186,21 +200,25 @@ class PairingConsumer(CustomBaseConsumer):
             #       the status was active before the match was found.
             await database_sync_to_async(matched_pairing_request.switch_status)(PairingRequest.Status.ACTIVE)
 
-            # Delete the match
-            pairing_match.adelete()
-
             # Notify the users that the match has been cancelled
             await self.notify_cancelled(pairing_request)
-            await self.notify_cancelled(matched_pairing_request)
+            await self.notify_cancelled(pairing_request, matched_pairing_request.user_id)
+
+            # Delete the pairing match and the pairing request
+            await pairing_request.pairingmatch.adelete()
+            await pairing_request.adelete()
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid status for cancelling pairing request'})
 
-    async def notify_cancelled(self, pairing_request):
+    async def notify_cancelled(self, cancelled_pairing_request, user_id=None):
         """
         Notifies the user that the pairing request has been cancelled.
+        If you provide a user_id, it will be used instead of the pairing request's user ID.
+        This is useful to notify the other user in the pairing.
         """
         # Get the user group name
-        user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
+        user_id = user_id or cancelled_pairing_request.user_id
+        user_group_name = get_user_group_name(self.__class__.__name__, user_id)
 
         # Notify the user that the pairing request has been cancelled
         await self.channel_layer.group_send(
@@ -209,6 +227,9 @@ class PairingConsumer(CustomBaseConsumer):
                 'status': 'success',
                 'type': 'send.json',
                 'event_type': 'cancel',
+                'data': {
+                    'from_current_user': user_id == cancelled_pairing_request.user_id
+                }
             }
         )
 
@@ -236,12 +257,29 @@ class PairingConsumer(CustomBaseConsumer):
             # Create the pairing request
             await PairingRequest.objects.acreate(user=user, debate=debate)
 
+        # Notify the user that the pairing request has been created
+        await self.notify_request_pairing(pairing_request, debate)
+
+    async def notify_request_pairing(self, pairing_request, debate=None):
+        """
+        Notifies the user that the pairing request has been created.
+        If you provide a debate, it will be used instead of querying the pairing request for the debate.
+        This is useful when we have the debate object already.
+        """
+        # Get the user group name
+        user_group_name = get_user_group_name(self.__class__.__name__, pairing_request.user_id)
+
         # Get the pairing request ID
-        html = render_to_string('pairing/pairing_header.html', {'debate': debate})
+        html = render_to_string(
+            'pairing/pairing_header.html',
+            {
+                'debate': debate or pairing_request.debate
+            }
+        )
 
         # Notify the user that the pairing request has been created
         await self.channel_layer.group_send(
-            get_user_group_name(self.__class__.__name__, user.id),
+            user_group_name,
             {
                 'status': 'success',
                 'type': 'send.json',

@@ -249,6 +249,13 @@
     </div>
 </nav>
 
+<!-- Pairing Banner -->
+<div id="pairing-banner-container">
+    {% if request.user.current_pairing_request or True %}
+        {% include 'pairing/pairing_header.html' %}
+    {% endif %}
+</div>
+
 <div aria-live="polite" aria-atomic="true">
     <div class="toast-container p-3 position-fixed mt-5 top-0 start-50 translate-middle-x" id="toastPlacement">
     </div>

@@ -133,6 +133,46 @@ class WebSocketManager {
             }
         });
     }
+
+    request_pairing() {
+        this.send({
+            'stream': 'pairing',
+            'payload': {
+                'event_type': 'request_pairing',
+                'data': {}
+            }
+        });
+    }
+
+    cancel_pairing() {
+        this.send({
+            'stream': 'pairing',
+            'payload': {
+                'event_type': 'cancel',
+                'data': {}
+            }
+        });
+    }
+
+    start_search() {
+        this.send({
+            'stream': 'pairing',
+            'payload': {
+                'event_type': 'start_search',
+                'data': {}
+            }
+        });
+    }
+
+    pairing_keepalive() {
+        this.send({
+            'stream': 'pairing',
+            'payload': {
+                'event_type': 'keepalive',
+                'data': {}
+            }
+        });
+    }
 }
 
 // Usage
