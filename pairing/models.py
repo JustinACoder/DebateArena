@@ -1,9 +1,9 @@
 from django.contrib.auth import get_user_model
-from django.db.models import F, Q
+from django.db.models import F, Q, Subquery, OuterRef
 
-from debate.models import Debate
+from debate.models import Debate, Stance
 from django.db import models
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from django.conf import settings
 
 from discussion.models import Discussion
@@ -14,8 +14,9 @@ class PairingRequestManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().annotate(
             is_expired=(
-                Q(status=PairingRequest.Status.ACTIVE) &
-                Q(last_keepalive_ping__lt=datetime.now() - timedelta(seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
+                    Q(status=PairingRequest.Status.ACTIVE) &
+                    Q(last_keepalive_ping__lt=datetime.now() - timedelta(
+                        seconds=settings.PAIRING_REQUEST_EXPIRY_SECONDS))
             )
         )
 
@@ -29,12 +30,22 @@ class PairingRequestManager(models.Manager):
 
     def get_best_match(self, pairing_request, for_update=False):
         queryset = self.select_for_update() if for_update else self
-        return queryset.filter(
+
+        # Other user stance subquery
+        other_user_stance = Subquery(
+            Stance.objects.filter(
+                debate=pairing_request.debate,
+                user=OuterRef('user')
+            ).values('stance')[:1]
+        )
+
+        return queryset.annotate(
+            other_user_stance=other_user_stance
+        ).filter(
             debate=pairing_request.debate,
             status=pairing_request.status,
-            desired_stance=pairing_request.user.get_stance(pairing_request.debate),
-            user__stance_set__debate=pairing_request.debate,
-            user__stance_set__stance=pairing_request.desired_stance,
+            desired_stance=pairing_request.debate.get_stance(pairing_request.user),
+            other_user_stance=pairing_request.desired_stance,
             is_expired=False
         ).exclude(user=pairing_request.user).first()
 
@@ -55,6 +66,10 @@ class PairingRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = PairingRequestManager()
+
+    @property
+    def seconds_elapsed_since_creation(self):
+        return round((datetime.now(timezone.utc) - self.created_at).total_seconds())
 
     def update_keepalive(self):
         """
@@ -78,21 +93,32 @@ class PairingRequest(models.Model):
 
 
 class PairingMatchManager(models.Manager):
-    def create_match(self, pairing_request_1, pairing_request_2, status=PairingRequest.Status.MATCH_FOUND):
+    def create_match(self, pairing_request_1, pairing_request_2):
         """
-        Creates a new PairingMatch between the two PairingRequests.
+        Completes the pairing by switching the status of the PairingRequests to PAIRED.
+        It then creates a new Discussion between the two users and sets it as the related_discussion.
         """
-        # Switch the status of the PairingRequests
-        pairing_request_1.switch_status(status)
-        pairing_request_2.switch_status(status)
+        pairing_request_1.switch_status(PairingRequest.Status.PAIRED)
+        pairing_request_2.switch_status(PairingRequest.Status.PAIRED)
+
+        # Create the Discussion
+        discussion = create_discussion_and_readcheckpoints(
+            pairing_request_1.debate_id,
+            pairing_request_1.user_id,
+            pairing_request_2.user_id
+        )
+
+        # No need to add to live discussion list since we will redirect the user to the discussion
+        # which will automatically add the discussion to the live discussion list
 
         # Create the PairingMatch
-        return self.create(pairing_request_1=pairing_request_1, pairing_request_2=pairing_request_2)
+        pairing_match = self.create(
+            pairing_request_1=pairing_request_1,
+            pairing_request_2=pairing_request_2,
+            related_discussion=discussion,
+        )
 
-    def get_other_request(self, pairing_request):
-        return self.filter(
-            Q(pairing_request_1=pairing_request) | Q(pairing_request_2=pairing_request)
-        ).exclude(id=pairing_request.id).first()
+        return pairing_match
 
 
 class PairingMatch(models.Model):
@@ -107,32 +133,17 @@ class PairingMatch(models.Model):
     def get_debate(self):
         return self.pairing_request_1.debate
 
-    def get_other_request(self, pairing_request):
+    def get_other_request(self, pairing_request, for_update=False):
         if self.pairing_request_1 == pairing_request:
-            return self.pairing_request_2
+            if for_update:
+                return PairingRequest.objects.select_for_update().get(pk=self.pairing_request_2_id)
+            else:
+                return self.pairing_request_2
         elif self.pairing_request_2 == pairing_request:
-            return self.pairing_request_1
-
-    def complete_pairing(self):
-        """
-        Completes the pairing by switching the status of the PairingRequests to PAIRED.
-        It then creates a new Discussion between the two users and sets it as the related_discussion.
-        """
-        self.pairing_request_1.switch_status(PairingRequest.Status.PAIRED)
-        self.pairing_request_2.switch_status(PairingRequest.Status.PAIRED)
-
-        # Create the Discussion
-        discussion = create_discussion_and_readcheckpoints(
-            self.pairing_request_1.debate_id,
-            self.pairing_request_1.user_id,
-            self.pairing_request_2.user_id
-        )
-
-        # No need to add to live discussion list since we will redirect the user to the discussion
-        # which will automatically add the discussion to the live discussion list
-
-        self.related_discussion = discussion
-        self.save()
+            if for_update:
+                return PairingRequest.objects.select_for_update().get(pk=self.pairing_request_1_id)
+            else:
+                return self.pairing_request_1
 
     def __str__(self):
         return f'PairingMatch(pairing_request_1={self.pairing_request_1}, pairing_request_2={self.pairing_request_2})'

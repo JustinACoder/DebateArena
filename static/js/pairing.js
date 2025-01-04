@@ -53,6 +53,9 @@ function requestPairingHandler(data) {
     container.html(data["html"]);
     processNewElapsedTime(container.find(".elapsed-time"));
     startKeepaliveLoop();
+
+    // Indicate to the server that we are ready to start searching
+    websocketManager.start_search();
 }
 
 function startSearchHandler(data) {
@@ -85,6 +88,6 @@ function cancelPairing(buttonElement) {
     websocketManager.cancel_pairing();
 }
 
-function requestPairing() {
-    websocketManager.request_pairing();
+function requestPairing(desiredStance, debateId) {
+    websocketManager.request_pairing(desiredStance, debateId);
 }

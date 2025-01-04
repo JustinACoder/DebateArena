@@ -1,4 +1,4 @@
-.pairing-banner {
+#pairing-banner {
     height: var(--pairing-banner-height);
     top: var(--nav-height);
 
@@ -9,17 +9,17 @@
     background-position-x: 100%;
 }
 
-.pairing-banner.match-found {
+#pairing-banner.match-found {
     background: linear-gradient(106deg, var(--bs-success) 30%, #1db56f 45%, #0ce982 50%, #1db56f 54%, var(--bs-success) 70%);
     animation: shimmer 1s infinite linear;
     background-position-x: 100%;
 }
 
-.pairing-banner:not(.match-found) .match-found-content {
+#pairing-banner:not(.match-found) .match-found-content {
     display: none !important;
 }
 
-.pairing-banner.match-found .searching-content {
+#pairing-banner.match-found .searching-content {
     display: none !important;
 }
 

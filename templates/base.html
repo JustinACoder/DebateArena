@@ -38,11 +38,11 @@
             --bs-font-sans-serif: 'Montserrat', sans-serif;
         {#--bs-dropdown-link-hover-bg: rgba(0, 0, 0, 0.1); // TODO: modify bootstrap sass file for this? this impacts the bg color of hover of dropdown items #} 
             --nav-height: 56px;
-            --pairing-banner-height: 0;
+            --pairing-banner-height: 0px;
             --total-header-height: calc(var(--nav-height) + var(--pairing-banner-height));
         }
         
-        :root:has(.pairing-banner) {
+        :root:has( #pairing-banner) {
             --pairing-banner-height: 56px !important;
         }
 
@@ -251,7 +251,7 @@
 
 <!-- Pairing Banner -->
 <div id="pairing-banner-container">
-    {% if request.user.current_pairing_request or True %}
+    {% if request.user.current_pairing_request %}
         {% include 'pairing/pairing_header.html' %}
     {% endif %}
 </div>

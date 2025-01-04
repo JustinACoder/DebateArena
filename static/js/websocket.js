@@ -38,6 +38,14 @@ class WebSocketManager {
             console.error('Websocket connection error:', event);
             this.reconnect(num_retries);
         };
+
+        // Bind this instance to this object for all methods
+        // Source: https://stackoverflow.com/a/72197516/14107875
+        Object.getOwnPropertyNames(WebSocketManager.prototype).forEach((key) => {
+            if (key !== 'constructor') {
+                this[key] = this[key].bind(this);
+            }
+        });
     }
 
     reconnect(num_retries) {
@@ -134,12 +142,15 @@ class WebSocketManager {
         });
     }
 
-    request_pairing() {
+    request_pairing(desiredStance, debateId) {
         this.send({
             'stream': 'pairing',
             'payload': {
                 'event_type': 'request_pairing',
-                'data': {}
+                'data': {
+                    'desired_stance': desiredStance,
+                    'debate_id': debateId
+                }
             }
         });
     }
