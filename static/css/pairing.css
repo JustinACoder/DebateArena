@@ -15,11 +15,38 @@
     background-position-x: 100%;
 }
 
-#pairing-banner:not(.match-found) .match-found-content {
+#pairing-banner.server-error {
+    background: linear-gradient(106deg, var(--bs-danger) 30%, #ff4d4d 45%, #ff6666 50%, #ff4d4d 54%, var(--bs-danger) 70%);
+    animation: shimmer 5s infinite linear;
+    background-position-x: 100%;
+}
+
+#pairing-banner.connection-error {
+    background: linear-gradient(106deg, var(--bs-warning) 30%, #ffcc00 45%, #ffdb4d 50%, #ffcc00 54%, var(--bs-warning) 70%);
+    animation: shimmer 5s infinite linear;
+    background-position-x: 100%;
+}
+
+#pairing-banner:not(.match-found) .match-found-content,
+#pairing-banner.match-found:is(.server-error, .connection-error) .match-found-content {
     display: none !important;
 }
 
-#pairing-banner.match-found .searching-content {
+#pairing-banner:not(.server-error) .server-error-content {
+    display: none !important;
+}
+
+#pairing-banner:not(.connection-error) .connection-error-content {
+    display: none !important;
+}
+
+#pairing-banner.match-found .searching-content,
+#pairing-banner.server-error .searching-content,
+#pairing-banner.connection-error .searching-content {
+    display: none !important;
+}
+
+#pairing-banner.match-found:not(:is(.server-error, .connection-error)) #cancel-pairing-button {
     display: none !important;
 }
 

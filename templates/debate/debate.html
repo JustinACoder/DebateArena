@@ -136,7 +136,7 @@
                                                 always
                                                 change your stance later if you change your mind.</p>
                                             <hr>
-                                            <p>I, <strong>{{ request.user.username }}</strong>, am hereby declaring my
+                                            <p>I, <strong>{{ request.user.username|default:"<i>Random User of the Internet</i>" }}</strong>, am hereby declaring my
                                                 stance as...</p>
                                             <form class="w-100 text-center" action="{% url 'set_stance' debate.slug %}"
                                                   method="post" id="set-stance-form">

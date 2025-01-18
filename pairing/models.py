@@ -93,29 +93,18 @@ class PairingRequest(models.Model):
 
 
 class PairingMatchManager(models.Manager):
-    def create_match(self, pairing_request_1, pairing_request_2):
+    def create_match_found(self, pairing_request_1, pairing_request_2):
         """
-        Completes the pairing by switching the status of the PairingRequests to PAIRED.
-        It then creates a new Discussion between the two users and sets it as the related_discussion.
+        Creates a PairingMatch between the two PairingRequests.
         """
-        pairing_request_1.switch_status(PairingRequest.Status.PAIRED)
-        pairing_request_2.switch_status(PairingRequest.Status.PAIRED)
-
-        # Create the Discussion
-        discussion = create_discussion_and_readcheckpoints(
-            pairing_request_1.debate_id,
-            pairing_request_1.user_id,
-            pairing_request_2.user_id
-        )
-
-        # No need to add to live discussion list since we will redirect the user to the discussion
-        # which will automatically add the discussion to the live discussion list
+        pairing_request_1.switch_status(PairingRequest.Status.MATCH_FOUND)
+        pairing_request_2.switch_status(PairingRequest.Status.MATCH_FOUND)
 
         # Create the PairingMatch
+        # The related_discussion will be created when the PairingMatch is completed
         pairing_match = self.create(
             pairing_request_1=pairing_request_1,
             pairing_request_2=pairing_request_2,
-            related_discussion=discussion,
         )
 
         return pairing_match
@@ -124,7 +113,7 @@ class PairingMatchManager(models.Manager):
 class PairingMatch(models.Model):
     pairing_request_1 = models.OneToOneField(PairingRequest, on_delete=models.CASCADE, related_name='pairing_request_1')
     pairing_request_2 = models.OneToOneField(PairingRequest, on_delete=models.CASCADE, related_name='pairing_request_2')
-    related_discussion = models.OneToOneField(Discussion, on_delete=models.CASCADE, related_name='related_discussion')
+    related_discussion = models.OneToOneField(Discussion, on_delete=models.CASCADE, related_name='related_discussion', null=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -144,6 +133,31 @@ class PairingMatch(models.Model):
                 return PairingRequest.objects.select_for_update().get(pk=self.pairing_request_1_id)
             else:
                 return self.pairing_request_1
+
+    def complete_match(self):
+        """
+        Completes the pairing by switching the status of the PairingRequests to PAIRED.
+        It then creates a new Discussion between the two users and sets it as the related_discussion.
+
+        Returns the created Discussion.
+        """
+        self.pairing_request_1.switch_status(PairingRequest.Status.PAIRED)
+        self.pairing_request_2.switch_status(PairingRequest.Status.PAIRED)
+
+        # Create the Discussion
+        discussion = create_discussion_and_readcheckpoints(
+            self.pairing_request_1.debate_id,
+            self.pairing_request_1.user_id,
+            self.pairing_request_2.user_id
+        )
+
+        # No need to add to live discussion list since we will redirect the user to the discussion
+        # which will automatically add the discussion to the live discussion list
+
+        self.related_discussion = discussion
+        self.save()
+
+        return discussion
 
     def __str__(self):
         return f'PairingMatch(pairing_request_1={self.pairing_request_1}, pairing_request_2={self.pairing_request_2})'

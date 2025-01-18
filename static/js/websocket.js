@@ -29,7 +29,7 @@ class WebSocketManager {
         // Handle connection close or error by resetting the connection state
         this.socket.onclose = (event) => {
             this.isConnected = false;
-            console.error('Websocket connection closed:', event);
+            console.warn('Websocket connection closed:', event);
             this.reconnect(num_retries);
         };
 
@@ -50,8 +50,8 @@ class WebSocketManager {
 
     reconnect(num_retries) {
         if (num_retries > 0) {
+            $.toast('warning', 'Disconnected. Reconnecting...', true, 2000);
             setTimeout(() => {
-                $.toast('warning', 'Disconnected. Reconnecting...', true, 2000);
                 this.connect(num_retries - 1);
             }, 3000);
         } else {
@@ -77,16 +77,17 @@ class WebSocketManager {
             window.location.href = payload['data']['url'];
         }
 
-        if (payload['status'] === 'error') {
-            $.toast('error', `Error websocket status (${payload['event_type']}): ${payload['message']}`, false);
-            return;
+        if (payload['status'] === 'error' && payload['no_toast'] !== true) {
+            $.toast('error', `Error websocket status: ${payload['message']}`, false);
         }
 
         let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
         if (handler_key in this.handlers) {
             let handlers_for_key = this.handlers[handler_key];
             for (let handler of handlers_for_key) {
-                handler(payload['data'] ?? {});
+                let data = payload['data'] ?? {};
+                data['status'] = data['status'] ?? payload['status'];
+                handler(data);
             }
         } else {
             console.log(`No handler for ${handler_key}, the available handlers are: ${Object.keys(this.handlers)}`);

@@ -1,16 +1,12 @@
-let elapsedTimeElementsList = $();
 let keepaliveIntervalID;
-let timeIntervalID;
+let keepaliveAckTimeoutID;
+const keepaliveInterval = 10000;
+const keepaliveAckTimeout = 10000;
+let timeIntervalIDList = [];
+const MAX_KEEPALIVE_RETRIES = 5;
+let keepaliveRetries = 0;
 
 $(document).ready(() => {
-    timeIntervalID = setInterval(() => {
-        elapsedTimeElementsList.each(function () {
-            let secondsElapsed = parseInt($(this).data("seconds-elapsed"));
-            $(this).data("seconds-elapsed", secondsElapsed + 1);
-            $(this).text(formatSeconds(secondsElapsed));
-        });
-    }, 1000);
-
     // if the pairing banner is present, start the keepalive loop and process the new elapsed time elements
     const pairingBanner = $("#pairing-banner");
     if (pairingBanner.length) {
@@ -23,16 +19,28 @@ $(document).ready(() => {
     websocketManager.add_handler("pairing", "start_search", startSearchHandler);
     websocketManager.add_handler("pairing", "match_found", matchFoundHandler);
     websocketManager.add_handler("pairing", "cancel", cancelPairingHandler);
+    websocketManager.add_handler("pairing", "keepalive_ack", keepaliveAckHandler);
 });
+
+function setIntervalAndExecute(callback, interval) {
+    callback();
+    return setInterval(callback, interval);
+}
 
 function processNewElapsedTime(elapsedTimeElements) {
     elapsedTimeElements.each(function () {
         // Set the initial seconds elapsed
         $(this).data("seconds-elapsed", $(this).data("seconds-elapsed") ?? 0);
-    })
 
-    // Add the new element to the list
-    elapsedTimeElementsList = elapsedTimeElementsList.add(elapsedTimeElements);
+        const timeIntervalID = setIntervalAndExecute(() => {
+            elapsedTimeElements.each(function () {
+                let secondsElapsed = parseInt($(this).data("seconds-elapsed"));
+                $(this).data("seconds-elapsed", secondsElapsed + 1);
+                $(this).text(formatSeconds(secondsElapsed));
+            });
+        }, 1000);
+        timeIntervalIDList.push(timeIntervalID);
+    });
 }
 
 function formatSeconds(seconds) {
@@ -45,7 +53,60 @@ function formatSeconds(seconds) {
 }
 
 function startKeepaliveLoop() {
-    keepaliveIntervalID = setInterval(websocketManager.pairing_keepalive, 10000); // TODO: To constant?
+    keepaliveIntervalID = setIntervalAndExecute(function () {
+        last_date = Date.now();
+        websocketManager.pairing_keepalive();
+        resetKeepaliveAckTimeout();
+    }, keepaliveInterval);
+}
+
+function stopKeepaliveLoop() {
+    clearInterval(keepaliveIntervalID);
+    clearTimeout(keepaliveAckTimeoutID); // Clear the timeout as well, as we wont expect any more acks
+}
+
+function setBannerServerError() {
+    const pairingBanner = $("#pairing-banner");
+    pairingBanner.removeClass("connection-error").addClass("server-error");
+}
+
+function setNoAckError() {
+    const pairingBanner = $("#pairing-banner");
+    pairingBanner.removeClass("server-error").addClass("connection-error");
+}
+
+function removeBannerError() {
+    const pairingBanner = $("#pairing-banner");
+    pairingBanner.removeClass("server-error connection-error");
+}
+
+function increaseKeepaliveRetries() {
+    keepaliveRetries++;
+    if (keepaliveRetries >= MAX_KEEPALIVE_RETRIES) {
+        console.error("Max keepalive retries reached. Cancelling pairing.");
+        stopKeepaliveLoop();
+    }
+}
+
+function resetKeepaliveAckTimeout() {
+    clearTimeout(keepaliveAckTimeoutID);
+    keepaliveAckTimeoutID = setTimeout(() => {
+        setNoAckError();
+        increaseKeepaliveRetries();
+    }, keepaliveAckTimeout);
+}
+
+function keepaliveAckHandler(data) {
+    clearTimeout(keepaliveAckTimeoutID);
+    if (data["status"] === "success") {
+        removeBannerError();
+        keepaliveRetries = 0;
+    }else if (data["status"] === "error") {
+        setBannerServerError();
+        increaseKeepaliveRetries();
+    }else {
+        console.error("Invalid status in keepalive_ack:", data["status"]);
+    }
 }
 
 function requestPairingHandler(data) {
@@ -69,22 +130,25 @@ function matchFoundHandler(data) {
 
 function cancelPairingHandler(data) {
     const pairingBanner = $("#pairing-banner");
-    const isFromCurrentUser = data["from_current_user"];
+    pairingBanner.remove();
 
-    if (isFromCurrentUser) {
-        pairingBanner.remove();
-    } else {
-        pairingBanner.removeClass("match-found");
-    }
+    // Stop the keepalive loop
+    stopKeepaliveLoop();
 
-    clearInterval(keepaliveIntervalID);
-    clearInterval(timeIntervalID);
+    // Stop all elapsed time intervals
+    timeIntervalIDList.forEach((id) => clearInterval(id));
 }
 
 function cancelPairing(buttonElement) {
-    $(buttonElement).outerHTML = `<span class="spinner-border" role="status" aria-hidden="true"></span>`;
+    const pairingBanner = $("#pairing-banner");
+    const isError = pairingBanner.hasClass("connection-error") || pairingBanner.hasClass("server-error");
+    if (isError) {
+        cancelPairingHandler({});
+    } else {
+        $(buttonElement).outerHTML = `<span class="spinner-border" role="status" aria-hidden="true"></span>`;
+    }
 
-    // send the cancel pairing request
+    // send the cancel pairing request to the server (we can still try to cancel if there is an error)
     websocketManager.cancel_pairing();
 }
 

@@ -26,10 +26,6 @@ class PairingConsumer(CustomBaseConsumer):
     This consumer handles the WebSocket connection for pairing users together.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
-        self.wait_then_pair_coroutine = None
-
     async def receive_json(self, content, **kwargs):
         """
         Receives a JSON message from the client and processes it.
@@ -61,55 +57,43 @@ class PairingConsumer(CustomBaseConsumer):
         elif event_type == 'cancel':
             await self.cancel_pairing_request(user)
             return
-
-        # Get the active pairing request for the user
-        pairing_request = await self.get_pairing_request(user)
-
-        if not pairing_request:
-            return
-
-        if event_type == 'keepalive':
-            await database_sync_to_async(pairing_request.update_keepalive)()
+        elif event_type == 'keepalive':
+            await self.keepalive(user)
         else:
             await self.send_json({'status': 'error', 'message': 'Invalid event_type'})
 
-    async def get_pairing_request(self, user, for_update=False):
-        """
-        Gets the active pairing request for the user.
-        """
-        pairing_request = await database_sync_to_async(PairingRequest.objects.get_current_request)(user,
-                                                                                                   for_update=for_update)
+    async def keepalive(self, user):
+        pairing_request = await database_sync_to_async(PairingRequest.objects.get_current_request)(user)
 
         if not pairing_request:
-            await self.send_json({'status': 'error', 'message': 'User does not have an active pairing request'})
+            await self.send_json({
+                'status': 'error',
+                'no_toast': True,
+                'event_type': 'keepalive_ack',
+            })
+            return
 
-        return pairing_request
+        await database_sync_to_async(pairing_request.update_keepalive)()
+        await self.send_json({
+            'status': 'success',
+            'event_type': 'keepalive_ack',
+        })
 
     @database_sync_to_async
     @transaction.atomic
-    def create_match(self, pairing_request, best_match):
+    def complete_match(self, pairing_match: PairingMatch):
         """
-        Completes the pairing between the two pairing requests.
+        Completes the pairing match by creating the related discussion.
         """
-        return PairingMatch.objects.create_match(pairing_request, best_match)
+        return pairing_match.complete_match()
 
-    async def wait_then_pair(self, pairing_request, best_match):
+    async def wait_then_complete_pairing(self, pairing_match: PairingMatch):
         """
         Waits for a few seconds before completing the pairing.
         """
-        pairing_match = None
-        try:
-            await asyncio.sleep(3.5)
-
-            pairing_match = await self.create_match(pairing_request, best_match)
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            await self.send_json({'status': 'error', 'message': str(e)})
-        finally:
-            self.wait_then_pair_coroutine = None
-            if pairing_match:
-                await self.notify_paired_redirect(pairing_match)
+        await asyncio.sleep(3.5)
+        await self.complete_match(pairing_match)
+        await self.notify_paired_redirect(pairing_match)
 
     @database_sync_to_async
     @transaction.atomic
@@ -124,6 +108,7 @@ class PairingConsumer(CustomBaseConsumer):
             raise NoCurrentPairingRequestException(user)
 
         # Mark the pairing request as active
+        # TODO: is this really necessary?
         pairing_request.switch_status(PairingRequest.Status.ACTIVE)
 
         # Get the best match for the pairing request
@@ -137,13 +122,12 @@ class PairingConsumer(CustomBaseConsumer):
         # Source: https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE
 
         if not best_match:
-            return pairing_request, None
+            return pairing_request, None, None
 
-        # Mark both pairing requests as match found
-        pairing_request.switch_status(PairingRequest.Status.MATCH_FOUND)
-        best_match.switch_status(PairingRequest.Status.MATCH_FOUND)
+        # Create the pairing match
+        pairing_match = PairingMatch.objects.create_match_found(pairing_request, best_match)
 
-        return pairing_request, best_match
+        return pairing_request, best_match, pairing_match
 
     async def start_active_search(self, user):
         """
@@ -154,16 +138,19 @@ class PairingConsumer(CustomBaseConsumer):
         we make a good match based on things such as ELO, region, etc.
         """
         try:
-            pairing_request, best_match = await self.create_pairing_match_or_fail(user)
+            pairing_request, best_match, pairing_match = await self.create_pairing_match_or_fail(user)
         except NoCurrentPairingRequestException as e:
             await self.send_json({'status': 'error', 'message': str(e)})
             return
 
-        if not best_match:
+        if not pairing_match:
             await self.notify_start_search(pairing_request)
         else:
             await self.notify_match_found(pairing_request, best_match)
-            self.wait_then_pair_coroutine = asyncio.create_task(self.wait_then_pair(pairing_request, best_match))
+
+            # Wait a few seconds before redirecting the users to the discussion
+            # We do not await to avoid blocking the event loop
+            asyncio.create_task(self.wait_then_complete_pairing(pairing_match))  # noqa
 
     async def notify_start_search(self, pairing_request):
         """
@@ -206,7 +193,7 @@ class PairingConsumer(CustomBaseConsumer):
         Cancels the pairing request for the user.
         If no pairing request is found, it will raise a NoCurrentPairingRequestException.
 
-        It returns a list of (Cancelled PairingRequest, User ID to notify) tuples.
+        It returns the deleted pairing request.
         """
         # Retrieve and lock the pairing request
         pairing_request = PairingRequest.objects.get_current_request(user, for_update=True)
@@ -214,55 +201,26 @@ class PairingConsumer(CustomBaseConsumer):
         if not pairing_request:
             raise NoCurrentPairingRequestException(user)
 
-        # Switch the status of the pairing request to idle
-        pairing_request.switch_status(PairingRequest.Status.IDLE)
-
         if pairing_request.status in [PairingRequest.Status.ACTIVE, PairingRequest.Status.IDLE]:
             pairing_request.delete()
 
             # Object is deleted in DB but not in memory, return it for the notification
-            return [(pairing_request, user.id)]
-        elif pairing_request.status == PairingRequest.Status.MATCH_FOUND:
-            if self.wait_then_pair_coroutine:
-                # It's too late to cancel the match, we won't cancel it
-                self.wait_then_pair_coroutine.cancel()
-                return []
-
-            # Retrieve the matched pairing request
-            matched_pairing_request = pairing_request.pairingmatch.get_other_request(pairing_request, for_update=True)
-
-            # Switch the status of the matched pairing request to active
-            # Note: we know it is an active search since a passive search directly goes to paired status
-            #       without go through the match found status. Therefore, we can assume that the status
-            #       was active before the match was found.
-            # TODO: in the future, if we allow active to passive match, we need to switch the statys back to
-            #       the original status which might be active or passive here. For now, we will assume that
-            #       the status was active before the match was found.
-            matched_pairing_request.switch_status(PairingRequest.Status.ACTIVE)
-
-            # Delete the pairing match and the pairing request
-            pairing_request.pairingmatch.delete()
-            pairing_request.delete()
-
-            # Object is deleted in DB but not in memory, return it for the notification
-            return [(pairing_request, user.id), (pairing_request, matched_pairing_request.user_id)]
-
+            return pairing_request
         else:
-            raise Exception('Invalid status for cancelling pairing request')
+            raise Exception('You cannot cancel a pairing request that is not active or idle')
 
     async def cancel_pairing_request(self, user):
         """
         Cancels the pairing request.
         """
         try:
-            notify_list = await self.cancel_pairing_request_or_fail(user)
+            deleted_pairing_request = await self.cancel_pairing_request_or_fail(user)
         except NoCurrentPairingRequestException as e:
             await self.send_json({'status': 'error', 'message': str(e)})
             return
 
         # Notify the users that the pairing request has been cancelled
-        for cancelled_pairing_request, user_id in notify_list:
-            await self.notify_cancelled(cancelled_pairing_request, user_id=user_id)
+        await self.notify_cancelled(deleted_pairing_request, user_id=deleted_pairing_request.user_id)
 
     async def notify_cancelled(self, cancelled_pairing_request, user_id=None):
         """
