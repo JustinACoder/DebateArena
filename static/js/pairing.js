@@ -54,7 +54,6 @@ function formatSeconds(seconds) {
 
 function startKeepaliveLoop() {
     keepaliveIntervalID = setIntervalAndExecute(function () {
-        last_date = Date.now();
         websocketManager.pairing_keepalive();
         resetKeepaliveAckTimeout();
     }, keepaliveInterval);
