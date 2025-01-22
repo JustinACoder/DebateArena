@@ -18,7 +18,7 @@ class NoCurrentPairingRequestException(Exception):
 class PairingRequestAlreadyExistsException(Exception):
     def __init__(self, user):
         self.user = user
-        super().__init__(f'You already have an active pairing request')
+        super().__init__(f'You already have an active pairing request. Cancel it before creating a new one.')
 
 
 class PairingConsumer(CustomBaseConsumer):
