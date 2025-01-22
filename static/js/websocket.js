@@ -77,8 +77,10 @@ class WebSocketManager {
             window.location.href = payload['data']['url'];
         }
 
-        if (payload['status'] === 'error' && payload['no_toast'] !== true) {
-            $.toast('error', `Error websocket status: ${payload['message']}`, false);
+        if ((payload['message'] || payload['status'] === 'error') && payload['no_toast'] !== true) {
+            const message = payload['message'] ?? 'An unknown error occurred';
+            const shouldAutohide = payload['status'] === 'success';
+            $.toast(payload['status'] ?? 'info', message, shouldAutohide);
         }
 
         let handler_key = wsMessage['stream'] + '.' + payload['event_type'];
