@@ -47,16 +47,18 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     # 'allauth.socialaccount.providers.google',
     'debug_toolbar',
+    'django_celery_results',
+    'django_celery_beat',
     'voting',
     'django_htmx',
     'crispy_forms',
     'crispy_bootstrap5',
     'debate.apps.DebateConfig',
     'users.apps.UsersConfig',
-    "discussion.apps.DiscussionConfig",
-    "debateme.apps.DebatemeConfig",
-    "notifications.apps.NotificationsConfig",
-    "pairing.apps.PairingConfig"
+    'discussion.apps.DiscussionConfig',
+    'debateme.apps.DebatemeConfig',
+    'notifications.apps.NotificationsConfig',
+    'pairing.apps.PairingConfig'
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -120,11 +122,24 @@ DATABASES = {
 
 # Channel layer definitions
 CHANNEL_LAYERS = {
+    # "default": {
+    #     "BACKEND": "channels.layers.InMemoryChannelLayer"
+    # }
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f"redis://:{env('REDIS_PASSWORD')}@{env('REDIS_HOST')}:{env('REDIS_PORT')}/{env('REDIS_DB')}"]
+        }
     }
-    # TODO: Change to redis layer for production
 }
+
+# Celery settings
+CELERY_BROKER_URL = f"redis://:{env('REDIS_PASSWORD')}@{env('REDIS_HOST')}:{env('REDIS_PORT')}/{env('REDIS_DB')}"
+CELERY_RESULT_BACKEND = 'django-db'  # Should we store in redis instead?
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
