@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 from django.core.paginator import Paginator
 from django.db.models import Q, F, BooleanField, When, Case, Value, Window, DateTimeField, Subquery, OuterRef
 from django.contrib.auth.decorators import login_required
-from django.db.models.functions import Greatest
+from django.db.models.functions import Greatest, Coalesce
 from django.db.models.functions.window import Lag
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -79,23 +79,25 @@ def get_most_recent_discussions_queryset(user, discussions_type='all'):
         latest_message_text=Subquery(latest_message.values('text')),
         latest_message_created_at=Subquery(latest_message.values('created_at')),
         latest_message_author=Subquery(latest_message.values('author__username')),
+        readcheckpoint_read_at=Subquery(readcheckpoint.values('read_at')),
     ).annotate(
         recent_date=Greatest(
             'created_at',
             F('latest_message_created_at')
         ),
-        # Check if the latest message is the same message pointed by the current user's readcheckpoint for the discussion
-        has_unread_messages=Case(
+        # Should we tell the frontend to show the conversation as unread?
+        is_unread=Case(
             When(
-                latest_message_created_at__gt=Subquery(
-                    readcheckpoint.values('last_message_read__created_at')
-                ),
+                # The discussion was never opened or,
+                Q(readcheckpoint_read_at__isnull=True) |
+                # The discussion was opened, there is at least one message, and the latest message is not read
+                (Q(latest_message_created_at__isnull=False) & Q(
+                    latest_message_created_at__gt=F('readcheckpoint_read_at'))),
                 then=Value(True)
             ),
             default=Value(False),
             output_field=BooleanField()
-        )
-    ).select_related('debate', 'inviteuse').order_by('-recent_date')
+        )).select_related('debate', 'inviteuse').order_by('-recent_date')
 
 
 @login_required

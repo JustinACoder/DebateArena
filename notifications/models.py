@@ -25,19 +25,39 @@ class NotificationManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().select_related('notification_type')
 
-    def create_new_discussion_notification(self, user, discussion):
-        other_user = discussion.participant1 if discussion.participant1 != user else discussion.participant2
-
+    def create_new_discussion_notification(self, user_to_notify, other_user_name, discussion_id, debate_title):
+        """ Create a new discussion notification for the user. """
         return self.create(
-            user=user,
+            user=user_to_notify,
             notification_type=NotificationType.objects.get(name='new_discussion'),
             data={
-                'debate_title': discussion.debate.title,
-                'participant_username': other_user.username
+                'debate_title': debate_title,
+                'participant_username': other_user_name
             },
             url_name='specific_discussion',
-            url_args={'discussion_id': discussion.id}
+            url_args={'discussion_id': discussion_id}
         )
+
+    def create_bulk_new_discussion_notification(self, users_to_notify, other_user_names, discussion_ids, debate_titles):
+        if len(users_to_notify) != len(other_user_names) != len(discussion_ids) != len(debate_titles):
+            raise ValueError('The length of the arguments must be the same.')
+
+        notification_type = NotificationType.objects.get(name='new_discussion')
+
+        notifications = []
+        for user_to_notify, other_user_name, discussion_id, debate_title in zip(users_to_notify, other_user_names, discussion_ids, debate_titles):
+            notifications.append(Notification(
+                user=user_to_notify,
+                notification_type=notification_type,
+                data={
+                    'debate_title': debate_title,
+                    'participant_username': other_user_name
+                },
+                url_name='specific_discussion',
+                url_args={'discussion_id': discussion_id}
+            ))
+
+        return self.bulk_create(notifications)
 
     def create_new_message_notification(self, user, message):
         return self.create(

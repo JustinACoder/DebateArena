@@ -1,0 +1,77 @@
+<div class="modal top" id="debate-now-modal" tabindex="-1" aria-labelledby="debate-now-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="debate-now-label">Debate Now or Later!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="request-discussion-form" method="post" action="{% url 'request_passive_pairing' debate.id %}">
+                    {% csrf_token %}
+                    <p>Put your debating skills to the test by debating with someone else!</p>
+                    <ol class="marker-bold">
+                        <li>
+                            <span class="fw-bold">Take a Stance</span><br>
+                            <p>
+                                {% if stance is not None %}
+                                    <i class="bi bi-check-circle-fill text-success"></i> You have set your stance to
+                                    <strong>{{ stance }}</strong>.
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill text-danger"></i> You have not set your stance yet.
+                                {% endif %}
+                            </p>
+                        </li>
+                        <li>
+                            <span class="fw-bold">Choose Debate Timing</span><br>
+                            <p>Do you want to debate now or later?</p>
+                            <div class="form-check">
+                                <input type="radio" id="debate-now" name="pairing_type" class="form-check-input"
+                                       value="active" required>
+                                <label for="debate-now" class="form-check-label">Debate Now</label>
+                                <p class="small text-muted">Stay on the website while we find a match. You will be
+                                    redirected once a match is found.</p>
+                            </div>
+                            <div class="form-check">
+                                <input type="radio" id="debate-later" name="pairing_type" class="form-check-input"
+                                       value="passive">
+                                <label for="debate-later" class="form-check-label">Debate Later</label>
+                                <p class="small text-muted">We will search for a match passively. You will be notified
+                                    once a match is found.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="fw-bold">Choose a Stance to Debate With</span><br>
+                            <p>Do you want to debate with someone who has the same stance as you or someone with the
+                                opposite stance?</p>
+                            <p>I want to debate with someone who is...</p>
+                            <div class="form-check{{ has_requested_for|yesno:" has-passive-request," }}">
+                                <input type="radio" id="stance-wanted-for" name="stance_wanted"
+                                       class="form-check-input"
+                                       value="for" required>
+                                <label for="stance-wanted-for"
+                                       class="form-check-label">For</label>
+                                <div class="small text-muted existing-request-notice d-none">Already requested (<a href="#">see here</a>)</div>
+                            </div>
+                            <div class="form-check{{ has_requested_against|yesno:" has-passive-request," }}">
+                                <input type="radio" id="stance-wanted-against" name="stance_wanted"
+                                       class="form-check-input"
+                                       value="against">
+                                <label for="stance-wanted-against"
+                                       class="form-check-label">Against</label>
+                                <div class="small text-muted existing-request-notice d-none">Already requested (<a href="#">see here</a>)</div>
+                            </div>
+                        </li>
+                    </ol>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="debate-now-modal-close">
+                    Close
+                </button>
+                <button type="submit" class="btn btn-primary" id="debate-now-submit-btn" form="request-discussion-form"
+                        value="Submit">Start Debating
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

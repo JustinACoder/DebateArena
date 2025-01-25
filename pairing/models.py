@@ -139,7 +139,10 @@ class PairingMatch(models.Model):
         Completes the pairing by switching the status of the PairingRequests to PAIRED.
         It then creates a new Discussion between the two users and sets it as the related_discussion.
 
-        Returns the created Discussion.
+        Note: This doesn't add the discussion to the live list of discussions using websocket nor does it create
+        the notifications for the users. This should be done by the caller if needed.
+
+        :return: The created Discussion
         """
         self.pairing_request_1.switch_status(PairingRequest.Status.PAIRED)
         self.pairing_request_2.switch_status(PairingRequest.Status.PAIRED)
@@ -150,9 +153,6 @@ class PairingMatch(models.Model):
             self.pairing_request_1.user_id,
             self.pairing_request_2.user_id
         )
-
-        # No need to add to live discussion list since we will redirect the user to the discussion
-        # which will automatically add the discussion to the live discussion list
 
         self.related_discussion = discussion
         self.save()
