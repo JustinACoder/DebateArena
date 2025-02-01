@@ -1,15 +1,32 @@
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
 from django.db import models
-from django.db.models import Count, Case, When, Window, Max, Q
+from django.db.models import Count, Case, When, Window, Max, Q, OuterRef, Subquery
 from django.template.defaultfilters import slugify
 from django.db.models import F, Func, Value, StdDev
 from django.db.models.functions import Coalesce, Log, Greatest, Now, Abs, Cast
+from django.contrib.postgres.indexes import GinIndex
 from voting.models import Vote
 from datetime import timedelta
 
 
+class DebateQuerySet(models.QuerySet):
+    def with_stance(self, user):
+        if user.is_anonymous:
+            return self.annotate(user_stance=Value(None, output_field=models.BooleanField()))
+        else:
+            return self.annotate(
+                user_stance=Subquery(
+                    Stance.objects.filter(debate=OuterRef('pk'), user=user).values('stance')[:1]
+                )
+            )
+
+
 class DebateManager(models.Manager):
+    def get_queryset(self):
+        return DebateQuerySet(self.model, using=self._db)
+
     def get_popular(self):
         return self.annotate(num_votes=Count('vote')).order_by('-num_votes')
 
@@ -52,16 +69,36 @@ class DebateManager(models.Manager):
     def get_random(self):
         return self.order_by('?')
 
+    def search(self, query: str):
+        search_vector = (
+                SearchVector('title', weight='A') +
+                SearchVector('description', weight='C')
+        )
+        search_query = SearchQuery(query)
+
+        return self.annotate(
+            rank=SearchRank(search_vector, search_query)
+        ).filter(rank__gt=0.1).order_by('-rank')
+
 
 class Debate(models.Model):
     title = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
-    slug = models.SlugField(max_length=100, unique=True)  # WARNING: not generated automatically if using bulk_create
+    slug = models.SlugField(max_length=100,
+                            unique=True)  # WARNING: not generated automatically if using bulk operations
     vote = GenericRelation(Vote, related_query_name='debate')
+    search_vector = SearchVectorField(null=True,
+                                      editable=False)  # WARNING: not generated automatically if using bulk operations
 
     objects = DebateManager()
+
+    class Meta:
+        indexes = [
+            # Gin index for full-text search
+            GinIndex(fields=['search_vector'], name='search_vector_idx')
+        ]
 
     def get_stance(self, user):
         try:
@@ -80,6 +117,12 @@ class Debate(models.Model):
             # If there are debates with the same slug, append a number to the slug
             if count > 0:
                 self.slug = f"{self.slug}-{count}"
+
+        # Update the search vector for full-text search
+        self.search_vector = (
+                SearchVector('title', weight='A') +
+                SearchVector('description', weight='C')
+        )
 
         super(Debate, self).save(*args, **kwargs)
 
@@ -106,6 +149,10 @@ class Stance(models.Model):
 
     class Meta:
         unique_together = ('user', 'debate')  # A user can only have one stance on a debate
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'debate'])
+        ]
 
     def __str__(self):
         return f"Stance of {self.user} on \"{self.debate.title}\""

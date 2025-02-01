@@ -35,5 +35,6 @@ urlpatterns = [
     path('chat/', include('discussion.urls')),
     path('debateme/', include('debateme.urls')),
     path('accounts/notifications/', include('notifications.urls')),
+    path('pairing/', include('pairing.urls')),
     path('__debug__/', include('debug_toolbar.urls')),
 ] + debate_main_urlpatterns

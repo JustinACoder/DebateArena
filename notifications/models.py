@@ -3,6 +3,7 @@ from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Subquery
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
@@ -25,18 +26,19 @@ class NotificationManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().select_related('notification_type')
 
-    def create_new_discussion_notification(self, user, discussion):
-        other_user = discussion.participant1 if discussion.participant1 != user else discussion.participant2
-
+    def create_new_discussion_notification(self, user_to_notify, other_user_name, discussion_id, debate_title):
+        """ Create a new discussion notification for the user. """
         return self.create(
-            user=user,
-            notification_type=NotificationType.objects.get(name='new_discussion'),
+            user_id=user_to_notify,
+            notification_type_id=Subquery(
+                NotificationType.objects.filter(name='new_discussion').values('id')[:1]
+            ),
             data={
-                'debate_title': discussion.debate.title,
-                'participant_username': other_user.username
+                'debate_title': debate_title,
+                'participant_username': other_user_name
             },
             url_name='specific_discussion',
-            url_args={'discussion_id': discussion.id}
+            url_args={'discussion_id': discussion_id}
         )
 
     def create_new_message_notification(self, user, message):
@@ -120,7 +122,7 @@ def send_notification(sender, instance, created, **kwargs):
     channel_layer = get_channel_layer()
 
     # Get the user group name
-    user_group_name = get_user_group_name('NotificationConsumer', instance.user.id)
+    user_group_name = get_user_group_name('NotificationConsumer', instance.user_id)
 
     # Render the notification data
     html = render_to_string('notifications/notification.html', {'notification': instance})

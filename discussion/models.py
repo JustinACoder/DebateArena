@@ -50,9 +50,12 @@ class Discussion(models.Model):
         ReadCheckpoint.objects.create(discussion=self, user=self.participant1)
         ReadCheckpoint.objects.create(discussion=self, user=self.participant2)
 
-    def add_discussion_to_participants_list_live(self):
+    def add_discussion_to_participants_list_live(self, as_unread=True):
         # Get current channel layer
         channel_layer = get_channel_layer()
+
+        # Add the is_unread flag to the discussion
+        self.is_unread = as_unread
 
         # Render discussion to send to the participants
         discussion_html = render_to_string('discussion/discussion.html', context={'discussion': self})

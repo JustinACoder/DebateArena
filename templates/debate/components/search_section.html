@@ -1,0 +1,13 @@
+<section class="bg-primary-subtle py-5 mb-4" style="height: 50vh">
+    <div class="container text-center d-flex align-items-center justify-content-center flex-column h-100">
+        <h1 class="mb-4">Search for a Debate</h1>
+        <form action="{% url 'debate_search' %}" method="get" class="w-100" autocomplete="off">
+            <div class="input-group mb-3 mx-auto" style="max-width: 650px">
+                <input type="text" class="form-control" placeholder="Ex: Gun Control" name="search_query"
+                       aria-label="Search"
+                       aria-describedby="search-icon" value="{{ search_query }}" required>
+                <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</section>

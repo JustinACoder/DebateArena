@@ -44,7 +44,7 @@ def account_profile(request, username):
     profile_user = get_object_or_404(User.objects.select_related('profile'), username=username)
 
     # Get recent stances
-    stances = profile_user.stance_set.order_by('-created_at')[:10]
+    stances = profile_user.stance_set.select_related('debate').order_by('-created_at')[:5]
 
     context = {
         'profile_user': profile_user,

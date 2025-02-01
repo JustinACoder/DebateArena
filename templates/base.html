@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{% static 'libraries/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'libraries/bootstrap-icons.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pairing.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
@@ -29,24 +30,32 @@
     {% if user.is_authenticated %}
         <script src="{% static 'libraries/jquery.timeago.min.js' %}" type="text/javascript"></script>
         <script src="{% static 'js/websocket.js' %}"></script>
+        <script src="{% static 'js/pairing.js' %}"></script>
     {% endif %}
 
     <style>
         :root {
             --bs-font-sans-serif: 'Montserrat', sans-serif;
-        {#--bs-dropdown-link-hover-bg: rgba(0, 0, 0, 0.1); // TODO: modify bootstrap sass file for this? this impacts the bg color of hover of dropdown items #} --nav-height: 56px;
+        {#--bs-dropdown-link-hover-bg: rgba(0, 0, 0, 0.1); // TODO: modify bootstrap sass file for this? this impacts the bg color of hover of dropdown items #} 
+            --nav-height: 56px;
+            --pairing-banner-height: 0px;
+            --total-header-height: calc(var(--nav-height) + var(--pairing-banner-height));
+        }
+        
+        :root:has( #pairing-banner) {
+            --pairing-banner-height: 56px !important;
         }
 
         section {
-            scroll-margin-top: var(--nav-height);
+            scroll-margin-top: var(--total-header-height);
         }
 
         #main-content {
-            padding-top: var(--nav-height);
+            padding-top: var(--total-header-height);
         }
 
         #toastPlacement {
-            margin-top: var(--nav-height);
+            margin-top: var(--total-header-height);
         }
 
         @media (min-width: 768px) {
@@ -240,6 +249,13 @@
     </div>
 </nav>
 
+<!-- Pairing Banner -->
+<div id="pairing-banner-container">
+    {% if request.user.current_pairing_request %}
+        {% include 'pairing/pairing_header.html' %}
+    {% endif %}
+</div>
+
 <div aria-live="polite" aria-atomic="true">
     <div class="toast-container p-3 position-fixed mt-5 top-0 start-50 translate-middle-x" id="toastPlacement">
     </div>
@@ -313,19 +329,19 @@
         const notificationBadge = $('#notification-badge');
         const notificationDropdownIcon = $('#notification-dropdown-icon');
         let numberNotifsUnread = {{ request.user.num_unread_notifications }};
-        
+
         function updateNumberUnread(increment) {
             numberNotifsUnread += increment;
             if (numberNotifsUnread === 0) {
                 notificationBadge.addClass('d-none');
-            }else {
+            } else {
                 notificationBadge.removeClass('d-none');
             }
             notificationBadge.text(numberNotifsUnread);
         }
-        
+
         function handleNewNotification(data) {
-            let element = $(`<li class="my-2 notification unread">${data.html}</li>`);
+            let element = $(`<li class="my-2 notification unread" data-notification-id="${data.notification_id}">${data.html}</li>`);
             {# If we are not on the notifications page, we need to update the dropdown #}
             {# If the dropdown was never opened before, we have nothing to do since it will be updated when opened #}
             {# If the number of children li is greater than 0, then it has been opened before #}
@@ -334,13 +350,13 @@
             if (notificationList.children('li').length > 0) {
                 element.hide().prependTo(notificationList).slideDown();
             }
-            
+
             // Make sure the notification badge is visible
             notificationBadge.removeClass('d-none');
-            
+
             // Update the number of unread notifications
             updateNumberUnread(1);
-            
+
             // initialize timeago
             element.find('time.timeago').timeago();
 
@@ -363,7 +379,7 @@
             let isUnread = !data.is_read;
             let notification = $('.notification[data-notification-id="' + notificationId + '"]');
             notification.toggleClass('unread', isUnread);
-            
+
             // Update the number of unread notifications
             updateNumberUnread(isUnread ? 1 : -1);
         }
@@ -396,7 +412,7 @@
 
         websocketManager.add_handler('notification', 'new_notification', handleNewNotification);
         websocketManager.add_handler('notification', 'set_read', handleNotificationSetRead);
-        
+
         /************** Messages **************/
         const messagesBadge = $('#messages-badge');
         const messagesIcon = $('#messages-icon');
@@ -409,19 +425,19 @@
             if (!data.is_current_user) {
                 return;
             }
-            
+
             // ignore if the discussion is archived
             if (data.is_archived) {
                 return;
             }
-            
+
             // get the new number of unread messages
             numUnreadMessages -= data.num_messages_read;
 
             // Update the number of unread messages
             if (numUnreadMessages === 0) {
                 messagesBadge.addClass('d-none');
-            }else {
+            } else {
                 messagesBadge.removeClass('d-none');
             }
             messagesBadge.text(numUnreadMessages);
@@ -431,7 +447,7 @@
             if (data.is_current_user_sender) {
                 return;
             }
-            
+
             // ignore if the discussion is archived
             if (data.is_archived) {
                 return;
@@ -459,7 +475,7 @@
             websocketManager.add_handler('discussion', 'new_message', handleNewMessageUpdateBadge);
             websocketManager.add_handler('discussion', 'read_messages', handleMessageReadBadge);
         {% endif %}
-            
+
         /********** Initialize **********/
         $(document).ready(function () {
             // Redirect to the notifications page if the page is too small for the dropdown
