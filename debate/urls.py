@@ -17,5 +17,6 @@ urlpatterns = [
         path('request_discussion/', debate.views.request_discussion, name='request_discussion'),
         path('vote/', debate.views.vote, name='vote'),
         path('comment/', debate.views.comment, name='comment'),
+        path('list_comments/', debate.views.list_comments, name='list_comments'),
     ] + debateme_debate_urlpatterns)),  # TODO: figure out a better way to manage these URLs...
 ]

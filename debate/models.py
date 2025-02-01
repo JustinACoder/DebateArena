@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.postgres.search import SearchVector, SearchVectorField, SearchQuery, SearchRank
+from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Count, Case, When, Window, Max, Q, OuterRef, Subquery
 from django.template.defaultfilters import slugify
@@ -130,12 +131,47 @@ class Debate(models.Model):
         return f"\"{self.title}\" by {self.author}"
 
 
+class CommentManager(models.Manager):
+    def get_debate_comments_page(self, user, debate, page=1, page_size=10):
+        """
+        Get all comments for a debate ordered by date added
+        It also annotates the comments with the user's vote and the number of votes
+
+        :param user: The user instance
+        :param debate: The debate instance
+        :param page: The page number
+        :param page_size: The number of comments per page
+        :return: A queryset of comments
+        """
+        comments = self.filter(debate=debate).order_by('-date_added').select_related('author')
+
+        # Get the page of comments
+        paginator = Paginator(comments, page_size)
+        comments_page = paginator.get_page(page)
+
+        # Get votes for the comments
+        comment_votes = Vote.objects.get_for_user_in_bulk(comments_page, user)
+
+        # Get the number of votes for each comment
+        comment_vote_scores = Vote.objects.get_scores_in_bulk(comments)
+
+        # Annotate the comments with the vote information
+        for comment in comments:
+            key = str(comment.id)
+            comment.user_vote = comment_votes.get(key)
+            comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
+
+        return comments_page
+
+
 class Comment(models.Model):
     debate = models.ForeignKey(Debate, on_delete=models.CASCADE)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     text = models.TextField()
     date_added = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
+
+    objects = CommentManager()
 
     def __str__(self):
         return f"Comment by {self.author} on \"{self.debate.title}\""

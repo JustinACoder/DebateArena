@@ -1,0 +1,62 @@
+{% load crispy_forms_filters %}
+
+<h2>Comments</h2>
+{# Display the form no matter if the user is logged in or not #}
+{# but redirect the user to the login page if they click on the form #}
+<form action="{% url 'comment' debate.slug %}" method="post" id="comment-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <textarea class="form-control-plaintext border-bottom mb-2 overflow-y-hidden" placeholder="Add a comment..."
+              style="resize: none"
+              name="text" rows="1"
+              id="comment-text"></textarea>
+    <div class="d-flex justify-content-end">
+        <button type="submit" class="btn btn-outline-secondary" disabled>Add Comment</button>
+    </div>
+</form>
+
+{# If there are no comments, display a message #}
+{% if comments|length == 0 %}
+    <p class="w-100 text-center my-4">No comments yet.</p>
+    {# Otherwise, display the comments #}
+{% else %}
+    <ul class="list-unstyled mt-2">
+        {# For each comment, display basic info #}
+        {% for comment in comments %}
+            <li>
+                <div class="mb-4 comment-div">
+                    <span class="d-block fw-bold">{{ comment.author }}</span>
+                    <span class="d-block fw-light small">{{ comment.date_added }}</span>
+                    <p class="mb-1 text-break" style="white-space: pre-line">{{ comment.text }}</p>
+                    <div class="row align-items-center gx-2" role="group"
+                         aria-label="Comment Vote">
+                        <div class="col-auto">
+                            <button type="button"
+                                    class="btn fs-5 p-0{{ comment.user_vote.is_upvote|yesno:" active selected," }} btn-vote border-0"
+                                    data-bs-toggle="button"
+                                    aria-pressed="{{ comment.user_vote.is_upvote|default:"false" }}"
+                                    data-comment-id="{{ comment.id }}"
+                                    data-vote="1">
+                                <i class="bi bi-hand-thumbs-up{{ comment.user_vote.is_upvote|yesno:"-fill," }}"></i>
+                            </button>
+                        </div>
+                        <div class="col-auto">
+                                <span class="ms-auto fs-6 text-center align-top d-block" style="min-width: 1.5em"
+                                      id="comment-{{ comment.id }}-score">{{ comment.vote_score }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button"
+                                    class="btn fs-5 p-0{{ comment.user_vote.is_downvote|yesno:" active selected," }} btn-vote border-0"
+                                    data-bs-toggle="button"
+                                    aria-pressed="{{ comment.user_vote.is_downvote|default:"false" }}"
+                                    data-comment-id="{{ comment.id }}"
+                                    data-vote="-1">
+                                <i class="bi bi-hand-thumbs-down{{ comment.user_vote.is_downvote|yesno:"-fill," }}"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
