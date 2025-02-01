@@ -1,0 +1,57 @@
+#pairing-banner {
+    height: var(--pairing-banner-height);
+    top: var(--nav-height);
+
+    background: linear-gradient(106deg, var(--bs-primary) 30%, rgba(9,170,232,1) 45%, rgba(160,200,220,1) 50%, rgba(88,206,245,1) 54%, var(--bs-primary) 70%);
+    animation: shimmer 2s infinite cubic-bezier(0.3, 1.32, 0.65,-0.61);
+
+    background-size: 200% !important;
+    background-position-x: 100%;
+}
+
+#pairing-banner.match-found {
+    background: linear-gradient(106deg, var(--bs-success) 30%, #1db56f 45%, #0ce982 50%, #1db56f 54%, var(--bs-success) 70%);
+    animation: shimmer 1s infinite linear;
+    background-position-x: 100%;
+}
+
+#pairing-banner.server-error {
+    background: linear-gradient(106deg, var(--bs-danger) 30%, #ff4d4d 45%, #ff6666 50%, #ff4d4d 54%, var(--bs-danger) 70%);
+    animation: shimmer 5s infinite linear;
+    background-position-x: 100%;
+}
+
+#pairing-banner.connection-error {
+    background: linear-gradient(106deg, var(--bs-warning) 30%, #ffcc00 45%, #ffdb4d 50%, #ffcc00 54%, var(--bs-warning) 70%);
+    animation: shimmer 5s infinite linear;
+    background-position-x: 100%;
+}
+
+#pairing-banner:not(.match-found) .match-found-content,
+#pairing-banner.match-found:is(.server-error, .connection-error) .match-found-content {
+    display: none !important;
+}
+
+#pairing-banner:not(.server-error) .server-error-content {
+    display: none !important;
+}
+
+#pairing-banner:not(.connection-error) .connection-error-content {
+    display: none !important;
+}
+
+#pairing-banner.match-found .searching-content,
+#pairing-banner.server-error .searching-content,
+#pairing-banner.connection-error .searching-content {
+    display: none !important;
+}
+
+#pairing-banner.match-found:not(:is(.server-error, .connection-error)) #cancel-pairing-button {
+    display: none !important;
+}
+
+@keyframes shimmer {
+    to {
+        background-position-x: -100%;
+    }
+}

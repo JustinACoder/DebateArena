@@ -63,10 +63,6 @@
         .stance.active {
             opacity: 100% !important;
         }
-
-        .request-not-allowed {
-            opacity: 50%;
-        }
     </style>
 {% endblock %}
 
@@ -136,7 +132,7 @@
                                                 always
                                                 change your stance later if you change your mind.</p>
                                             <hr>
-                                            <p>I, <strong>{{ request.user.username }}</strong>, am hereby declaring my
+                                            <p>I, <strong>{{ request.user.username|default:"<i>Random User of the Internet</i>" }}</strong>, am hereby declaring my
                                                 stance as...</p>
                                             <form class="w-100 text-center" action="{% url 'set_stance' debate.slug %}"
                                                   method="post" id="set-stance-form">
@@ -190,76 +186,7 @@
                                     data-bs-target="#debate-now-modal">
                                 Debate Now
                             </button>
-                            <div class="modal top" id="debate-now-modal" tabindex="-1"
-                                 aria-labelledby="debate-now-label"
-                                 aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="debate-now-label">Debate Now!</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Put your debating skills to the test by debating with someone else
-                                                right now!</p>
-                                            <ol class="marker-bold">
-                                                <li>
-                                                    <span class="fw-bold">Take a Stance</span><br>
-                                                    <p>
-                                                        {% if stance is not None %}
-                                                            <i class="bi bi-check-circle-fill text-success"></i> You
-                                                            have set your stance to
-                                                            <strong>{{ stance }}</strong>.
-                                                        {% else %}
-                                                            <i class="bi bi-x-circle-fill text-danger"></i> You have not
-                                                            set your stance yet.
-                                                        {% endif %}
-                                                    </p>
-                                                </li>
-                                                <li>
-                                                    <span class="fw-bold">Choose a Stance to Debate With</span><br>
-                                                    <p>Do you want to debate with someone who has the same stance as you
-                                                        or someone with the opposite stance?</p>
-                                                    <form action="{% url 'request_discussion' debate.slug %}"
-                                                          method="post"
-                                                          id="request-discussion-form">
-                                                        {% csrf_token %}
-                                                        <p>I want to debate with someone who is...</p>
-                                                        <div class="form-check">
-                                                            <input type="checkbox" id="stance-wanted-for"
-                                                                   name="stance_wanted"
-                                                                   class="form-check-input"
-                                                                   value="for"
-                                                                    {{ has_requested_for|yesno:"checked disabled," }}>
-                                                            <label for="stance-wanted-for"
-                                                                   class="form-check-label">For{{ has_requested_for|yesno:" (Request Pending)," }}</label>
-                                                        </div>
-                                                        <div class="form-check">
-                                                            <input type="checkbox" id="stance-wanted-against"
-                                                                   name="stance_wanted"
-                                                                   class="form-check-input"
-                                                                   value="against"
-                                                                    {{ has_requested_against|yesno:"checked disabled," }}>
-                                                            <label for="stance-wanted-against" class="form-check-label">Against{{ has_requested_against|yesno:" (Request Pending)," }}</label>
-                                                        </div>
-                                                    </form>
-                                                </li>
-                                            </ol>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
-                                                    id="debate-now-modal-close">
-                                                Close
-                                            </button>
-                                            <button type="submit" class="btn btn-primary" id="debate-now-btn"
-                                                    form="request-discussion-form" value="Submit"
-                                                    disabled>Start Debating
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            {% include 'debate/components/debate_now_modal.html' %}
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="button" data-bs-toggle="modal"
@@ -351,42 +278,40 @@
 
 
         /****************** DISCUSSION REQUEST ******************/
-        const stanceWantedFor = $('#stance-wanted-for');
-        const stanceWantedAgainst = $('#stance-wanted-against');
-        const debateNowBtn = $('#debate-now-btn');
-        const closeDebateNowModal = $('#debate-now-modal-close');
+        const requestDiscussionForm = $('#request-discussion-form');
+        const debateNowModal = $('#debate-now-modal');
 
-        function updateStartDebatingBtn() {
-            {% if stance is None %}
-                return;
+        requestDiscussionForm.on('submit', function (event) {
+            {% if not user.is_authenticated %}
+                event.preventDefault();
+                window.location.href = "{% url 'account_login' %}?next={{ request.get_full_path }}";
             {% else %}
-                if ((stanceWantedFor.is(':checked') && !stanceWantedFor.prop('disabled')) ||
-                    (stanceWantedAgainst.is(':checked') && !stanceWantedAgainst.prop('disabled'))) {
-                    debateNowBtn.prop('disabled', false);
-                } else {
-                    debateNowBtn.prop('disabled', true);
+                const checkedStanceElement = requestDiscussionForm.find('input[name="stance_wanted"]:checked');
+                const pairingTypeElement = requestDiscussionForm.find('input[name="pairing_type"]:checked');
+                const desiredStance = checkedStanceElement.val() === 'for';
+                const isActivePairing = pairingTypeElement.val() === 'active';
+                {# TODO: Should we reload page no matter what the pairing timing is #}
+                if(isActivePairing) {
+                    event.preventDefault();
+                    requestPairing(desiredStance, {{ debate.id }});
+                    debateNowModal.modal('hide');
                 }
             {% endif %}
-        }
-
-        function uncheckIfEnabled(checkbox) {
-            checkbox.prop('checked', checkbox.prop('disabled'));
-        }
-
-        stanceWantedFor.change(function () {
-            uncheckIfEnabled(stanceWantedAgainst);
-            updateStartDebatingBtn();
         });
-        stanceWantedAgainst.change(function () {
-            uncheckIfEnabled(stanceWantedFor);
-            updateStartDebatingBtn();
+        
+        const pairingTypeRadios = requestDiscussionForm.find('input[name="pairing_type"]');
+        const stanceFormCheckWithExistingRequest = requestDiscussionForm.find('.form-check.has-passive-request');
+        const stanceBtnWithExistingRequest = stanceFormCheckWithExistingRequest.find('input');
+        const stanceExistingRequestNotice = stanceFormCheckWithExistingRequest.find('.existing-request-notice');
+        
+        pairingTypeRadios.change(function () {
+            const isPassive = pairingTypeRadios.filter(':checked').val() === 'passive';
+            stanceBtnWithExistingRequest.prop('disabled', isPassive);
+            stanceBtnWithExistingRequest.prop('checked', false);
+            stanceExistingRequestNotice.toggleClass('d-none', !isPassive);
         });
+        
 
-        closeDebateNowModal.click(function () {
-            uncheckIfEnabled(stanceWantedFor);
-            uncheckIfEnabled(stanceWantedAgainst);
-            updateStartDebatingBtn();
-        });
 
         /****************** VOTING ******************/
         let voteBtns = $('.btn-vote');

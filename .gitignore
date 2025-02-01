@@ -144,3 +144,4 @@ GitHub.sublime-settings
 
 # django related
 staticfiles/
+celerybeat-schedule

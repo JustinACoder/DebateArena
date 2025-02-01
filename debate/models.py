@@ -14,7 +14,7 @@ from datetime import timedelta
 class DebateQuerySet(models.QuerySet):
     def with_stance(self, user):
         if user.is_anonymous:
-            return self
+            return self.annotate(user_stance=Value(None, output_field=models.BooleanField()))
         else:
             return self.annotate(
                 user_stance=Subquery(
