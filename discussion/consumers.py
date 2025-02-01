@@ -130,10 +130,6 @@ class DiscussionConsumer(CustomBaseConsumer):
         # Update the ReadCheckpoint with the current time and latest message
         num_messages_read = await database_sync_to_async(read_checkpoint.read_messages)()
 
-        # If no new messages were read, no need to send the updated ReadCheckpoint information
-        if num_messages_read == 0:
-            return
-
         # Send the updated ReadCheckpoint information to BOTH participants
         participants_ids = [discussion.participant1_id, discussion.participant2_id]
         is_archived_flags = [discussion.is_archived_for_p1, discussion.is_archived_for_p2]

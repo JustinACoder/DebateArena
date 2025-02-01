@@ -282,8 +282,8 @@
                 relatedDiscussion.removeClass('unread');
                 
                 // if we are not in the discussion read, update the badge
-                // there is an exception if the read is due to the user first opening the discussion
-                if (discussionId !== currentDiscussionId && !data['through_load_discussion']) {
+                // we will also update if the user is first opening the chat
+                if (discussionId !== currentDiscussionId || data['through_load_discussion']) {
                     handleMessageReadBadge(data);  {# defined in base.html #}
                 }
                 return;
