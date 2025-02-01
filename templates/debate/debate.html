@@ -282,8 +282,8 @@
         const debateNowModal = $('#debate-now-modal');
 
         requestDiscussionForm.on('submit', function (event) {
-            event.preventDefault();
             {% if not user.is_authenticated %}
+                event.preventDefault();
                 window.location.href = "{% url 'account_login' %}?next={{ request.get_full_path }}";
             {% else %}
                 const checkedStanceElement = requestDiscussionForm.find('input[name="stance_wanted"]:checked');
@@ -292,11 +292,10 @@
                 const isActivePairing = pairingTypeElement.val() === 'active';
                 {# TODO: Should we reload page no matter what the pairing timing is #}
                 if(isActivePairing) {
+                    event.preventDefault();
                     requestPairing(desiredStance, {{ debate.id }});
-                } else {
-                    requestDiscussionForm.submit();
+                    debateNowModal.modal('hide');
                 }
-                debateNowModal.modal('hide');
             {% endif %}
         });
         

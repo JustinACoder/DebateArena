@@ -1,6 +1,5 @@
-import logging
-
 from celery import shared_task
+from celery.utils.log import get_task_logger
 from django.db import transaction
 from django.db.models import OuterRef, Subquery
 
@@ -11,11 +10,15 @@ from datetime import timedelta, datetime
 
 from collections import deque
 
+logger = get_task_logger(__name__)
+GRACE_PERIOD = timedelta(minutes=5)
+
 
 @transaction.atomic
 def create_match(pairing_request, other_pairing_request):
     """
     Creates a PairingMatch between the two pairing requests.
+    It also creates the related discussion and the notifications for the participants.
 
     returns the PairingMatch object.
     """
@@ -28,8 +31,21 @@ def create_match(pairing_request, other_pairing_request):
     related_discussion = pairing_match.complete_match()
 
     # If any of the participants is online, we will add the discussion to their list of discussions live
-    # TODO: ensure this doesnt cause too many queries
     related_discussion.add_discussion_to_participants_list_live()
+
+    # Send the notification to the participants
+    Notification.objects.create_new_discussion_notification(
+        pairing_request.user_id,
+        other_pairing_request.user.username,
+        related_discussion.id,
+        related_discussion.debate.title
+    )
+    Notification.objects.create_new_discussion_notification(
+        other_pairing_request.user_id,
+        pairing_request.user.username,
+        related_discussion.id,
+        related_discussion.debate.title
+    )
 
     return pairing_match
 
@@ -77,7 +93,7 @@ def try_pairing_passive_requests_in_debate(locked_requests):
             except Exception as e:  # noqa
                 # If the match fails, we need to put the oldest_matching_request back in the queue
                 # TODO: log the error
-                print('Error creating match:', e)
+                logger.error(f'Error creating match: {e}')
                 matching_queue.appendleft(oldest_matching_request)
             else:
                 pairing_matches.append(pairing_match)
@@ -95,11 +111,13 @@ def try_pairing_passive_requests():
 
     TODO: ensure the whole thing doesnt fail if a single pairing match fails
     """
+    logger.info('Trying to pair passive requests')
+
     # Get all debates with passive pairing requests that are at least 5 minutes old
     debates = PairingRequest.objects.filter(
         status=PairingRequest.Status.PASSIVE,
-        created_at__lte=datetime.now() - timedelta(minutes=5)
-    ).values_list('debate', 'debate__title', flat=True).distinct()
+        created_at__lte=datetime.now() - GRACE_PERIOD
+    ).values_list('debate', 'debate__title').distinct()
 
     # Define the user_stance subquery
     user_stance = Subquery(
@@ -109,14 +127,18 @@ def try_pairing_passive_requests():
         ).values('stance')[:1]
     )
 
+    logger.info(f'Found {len(debates)} debates with passive requests')
+
     for debate_id, debate_title in debates:
+        logger.info(f'Pairing requests for debate {debate_id} ({debate_title})')
+
         # Get all passive pairing requests for this debate
         requests = PairingRequest.objects.select_for_update(
             of=('self',)
         ).filter(
             debate=debate_id,
             status=PairingRequest.Status.PASSIVE,
-            created_at__lte=datetime.now() - timedelta(minutes=5)
+            created_at__lte=datetime.now() - GRACE_PERIOD
         ).annotate(
             user_stance=user_stance
         ).order_by('created_at')
@@ -125,26 +147,8 @@ def try_pairing_passive_requests():
             pairing_matches = try_pairing_passive_requests_in_debate(requests)
         except Exception as e:  # noqa
             # If the pairing fails, we need to log the error
-            print(f'Error pairing requests (debate {debate_id}):', e)
+            logger.error(f'Error pairing requests (debate {debate_id}): {e}')
             continue
 
-        # Prepare data for the notifications
-        requesting_user_ids = []
-        other_user_usernames = []
-        related_discussion_ids = []
-        for pairing_match in pairing_matches:
-            requesting_user_ids.append(pairing_match.pairing_request_1.user_id)
-            requesting_user_ids.append(pairing_match.pairing_request_2.user_id)
-            other_user_usernames.append(pairing_match.pairing_request_2.user.username)
-            other_user_usernames.append(pairing_match.pairing_request_1.user.username)
-            related_discussion_ids.append(pairing_match.discussion_id)
-            related_discussion_ids.append(pairing_match.discussion_id)
-        debate_titles = [debate_title] * len(requesting_user_ids)
-
-        # Create the notifications for the participants
-        Notification.objects.create_bulk_new_discussion_notification(
-            requesting_user_ids,
-            other_user_usernames,
-            related_discussion_ids,
-            debate_titles
-        )
+        logger.info(
+            f'Paired {2 * len(pairing_matches)} requests in debate {debate_id}. There are now {len(requests) - 2 * len(pairing_matches)} requests left.')

@@ -3,6 +3,7 @@ from channels.layers import get_channel_layer
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Subquery
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.template.loader import render_to_string
@@ -28,8 +29,10 @@ class NotificationManager(models.Manager):
     def create_new_discussion_notification(self, user_to_notify, other_user_name, discussion_id, debate_title):
         """ Create a new discussion notification for the user. """
         return self.create(
-            user=user_to_notify,
-            notification_type=NotificationType.objects.get(name='new_discussion'),
+            user_id=user_to_notify,
+            notification_type_id=Subquery(
+                NotificationType.objects.filter(name='new_discussion').values('id')[:1]
+            ),
             data={
                 'debate_title': debate_title,
                 'participant_username': other_user_name
@@ -37,27 +40,6 @@ class NotificationManager(models.Manager):
             url_name='specific_discussion',
             url_args={'discussion_id': discussion_id}
         )
-
-    def create_bulk_new_discussion_notification(self, users_to_notify, other_user_names, discussion_ids, debate_titles):
-        if len(users_to_notify) != len(other_user_names) != len(discussion_ids) != len(debate_titles):
-            raise ValueError('The length of the arguments must be the same.')
-
-        notification_type = NotificationType.objects.get(name='new_discussion')
-
-        notifications = []
-        for user_to_notify, other_user_name, discussion_id, debate_title in zip(users_to_notify, other_user_names, discussion_ids, debate_titles):
-            notifications.append(Notification(
-                user=user_to_notify,
-                notification_type=notification_type,
-                data={
-                    'debate_title': debate_title,
-                    'participant_username': other_user_name
-                },
-                url_name='specific_discussion',
-                url_args={'discussion_id': discussion_id}
-            ))
-
-        return self.bulk_create(notifications)
 
     def create_new_message_notification(self, user, message):
         return self.create(
@@ -140,7 +122,7 @@ def send_notification(sender, instance, created, **kwargs):
     channel_layer = get_channel_layer()
 
     # Get the user group name
-    user_group_name = get_user_group_name('NotificationConsumer', instance.user.id)
+    user_group_name = get_user_group_name('NotificationConsumer', instance.user_id)
 
     # Render the notification data
     html = render_to_string('notifications/notification.html', {'notification': instance})

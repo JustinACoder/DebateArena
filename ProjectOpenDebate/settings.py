@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+
+from celery.schedules import crontab
 from django.contrib import messages
 import os
 import environ
@@ -211,3 +213,11 @@ ADMINS = [
 # Pairing settings
 PAIRING_KEEPALIVE_INTERVAL = 10  # seconds
 PAIRING_REQUEST_EXPIRY_SECONDS = 30  # seconds
+
+# Celery Beat Tasks
+CELERY_BEAT_SCHEDULE = {
+    "passive_pairing": {
+        "task": "pairing.tasks.try_pairing_passive_requests",
+        "schedule": crontab(minute="0"),
+    },
+}
