@@ -66,6 +66,21 @@ def comment(request, debate_slug):
         return HttpResponseBadRequest()
 
 
+def list_comments(request, debate_slug):
+    # Get the debate instance
+    debate_instance = get_object_or_404(Debate, slug=debate_slug)
+
+    page = request.GET.get('page', 1)
+    comments = Comment.objects.get_debate_comments_page(request.user, debate_instance, page=page)
+
+    context = {
+        'page': comments,
+        'debate': debate_instance
+    }
+
+    return render(request, 'debate/components/comments_page.html', context)
+
+
 def debate(request, debate_slug):
     debate_instance = get_object_or_404(Debate.objects.select_related('author'), slug=debate_slug)
 
@@ -83,30 +98,15 @@ def debate(request, debate_slug):
     has_requested_for = user_discussion_requests.filter(stance_wanted=True).exists()
     has_requested_against = user_discussion_requests.filter(stance_wanted=False).exists()
 
-    # Get all comments for the debate sorted by date
-    comments = debate_instance.comment_set.order_by('-date_added').select_related('author')
-
     # Get the user's vote on the debate
     debate_vote = Vote.objects.get_for_user(debate_instance, request.user)
-
-    # Get votes for the comments
-    comment_votes = Vote.objects.get_for_user_in_bulk(comments, request.user)
 
     # Get the score for the debate
     debate_score = Vote.objects.get_score(debate_instance)
 
-    # Get the number of votes for each comment
-    comment_vote_scores = Vote.objects.get_scores_in_bulk(comments)
-
     # Annotate the debate with the user's stance, discussion requests and vote
     debate_instance.user_vote = debate_vote
     debate_instance.vote_score, debate_instance.num_votes = debate_score['score'], debate_score['num_votes']
-
-    # Annotate the comments with the vote information
-    for comment in comments:
-        key = str(comment.id)
-        comment.user_vote = comment_votes.get(key)
-        comment.vote_score, comment.num_votes = comment_vote_scores.get(key, {'score': 0, 'num_votes': 0}).values()
 
     # Get suggestions for the user
     suggested_debates = Debate.objects.get_random().exclude(id=debate_instance.id).with_stance(request.user)[:10]
@@ -117,7 +117,6 @@ def debate(request, debate_slug):
         'stance': stance_str,
         'has_requested_for': has_requested_for,
         'has_requested_against': has_requested_against,
-        'comments': comments,
         'comment_form': comment_form,
         'suggested_debates': suggested_debates,
     }

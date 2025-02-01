@@ -1,0 +1,55 @@
+{# If there are no comments, display a message #}
+{% if page.object_list|length == 0 %}
+    <p class="w-100 text-center my-4">No comments yet.</p>
+{% else %}
+    {% if page.number == 1 %}
+        <ul class="list-unstyled mt-2 d-flex flex-column gap-2">
+    {% endif %}
+{% for comment in page %}
+    {% if forloop.last and page.has_next %}
+        <li
+            hx-trigger="intersect once"
+            hx-get="{% url 'list_comments' debate.slug %}?page={{ page.next_page_number }}"
+            hx-swap="afterend"
+            hx-target="this"
+            >
+    {% else %}
+        <li>
+    {% endif %}
+        <div class="comment-div">
+            <span class="d-block fw-bold">{{ comment.author }}</span>
+            <span class="d-block fw-light small">{{ comment.date_added }}</span>
+            <p class="mb-1 text-break" style="white-space: pre-line">{{ comment.text }}</p>
+            <div class="row align-items-center gx-2" role="group" aria-label="Comment Vote">
+                <div class="col-auto">
+                    <button type="button"
+                            class="btn fs-5 p-0{{ comment.user_vote.is_upvote|yesno:" active selected," }} btn-vote border-0"
+                            data-bs-toggle="button"
+                            aria-pressed="{{ comment.user_vote.is_upvote|default:"false" }}"
+                            data-comment-id="{{ comment.id }}"
+                            data-vote="1">
+                        <i class="bi bi-hand-thumbs-up{{ comment.user_vote.is_upvote|yesno:"-fill," }}"></i>
+                    </button>
+                </div>
+                <div class="col-auto">
+                            <span class="ms-auto fs-6 text-center align-top d-block" style="min-width: 1.5em"
+                                  id="comment-{{ comment.id }}-score">{{ comment.vote_score }}</span>
+                </div>
+                <div class="col-auto">
+                    <button type="button"
+                            class="btn fs-5 p-0{{ comment.user_vote.is_downvote|yesno:" active selected," }} btn-vote border-0"
+                            data-bs-toggle="button"
+                            aria-pressed="{{ comment.user_vote.is_downvote|default:"false" }}"
+                            data-comment-id="{{ comment.id }}"
+                            data-vote="-1">
+                        <i class="bi bi-hand-thumbs-down{{ comment.user_vote.is_downvote|yesno:"-fill," }}"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </li>
+{% endfor %}
+{% if page.number == 1 %}
+    </ul>
+{% endif %}
+{% endif %}
