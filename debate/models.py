@@ -107,9 +107,11 @@ class Debate(models.Model):
         except Stance.DoesNotExist:
             return None
 
-    def save(self, *args, **kwargs):
+    def save(self, should_update_search_vector=True, *args, **kwargs):
+        is_new = not self.id
+
         # If the debate is new, generate a slug
-        if not self.id:
+        if is_new:
             self.slug = slugify(self.title)
 
             # get the count of debates with the same slug
@@ -119,13 +121,31 @@ class Debate(models.Model):
             if count > 0:
                 self.slug = f"{self.slug}-{count}"
 
-        # Update the search vector for full-text search
-        self.search_vector = (
-                SearchVector('title', weight='A') +
-                SearchVector('description', weight='C')
-        )
+        if not should_update_search_vector:
+            super(Debate, self).save(*args, **kwargs)
+            return
 
-        super(Debate, self).save(*args, **kwargs)
+        # If the want to update the search vector, we need to ensure that we are updating the search vector not inserting
+        if should_update_search_vector:
+            if is_new:
+                super(Debate, self).save(*args, **kwargs)
+
+                # Update the search vector
+                # This need to be done in update, not insert, because the search vector is a computed field
+                self.search_vector = (
+                        SearchVector('title', weight='A') +
+                        SearchVector('description', weight='C')
+                )
+
+                self.save(should_update_search_vector=False)
+            else:
+                # If the debate is not new and we want to update the search vector
+                self.search_vector = (
+                        SearchVector('title', weight='A') +
+                        SearchVector('description', weight='C')
+                )
+
+                super(Debate, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"\"{self.title}\" by {self.author}"
