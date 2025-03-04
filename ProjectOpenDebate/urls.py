@@ -20,7 +20,12 @@ from django.urls import include, path, reverse
 from . import views
 from debateme.urls import accounts_urlpatterns as debateme_accounts_urlpatterns
 from debate.urls import main_urlpatterns as debate_main_urlpatterns
+from ninja import NinjaAPI
+from discussion.api import router as discussion_router
 
+api = NinjaAPI()
+
+api.add_router('/discussions/', discussion_router, tags=['Discussions'])
 
 accounts_urlpatterns = [
     path('', include('allauth.urls')),
@@ -29,6 +34,7 @@ accounts_urlpatterns = [
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', api.urls),
     path('', views.main, name='main'),
     path('d/', include('debate.urls')),
     path('accounts/', include(accounts_urlpatterns)),
