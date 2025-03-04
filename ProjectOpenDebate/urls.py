@@ -22,10 +22,12 @@ from debateme.urls import accounts_urlpatterns as debateme_accounts_urlpatterns
 from debate.urls import main_urlpatterns as debate_main_urlpatterns
 from ninja import NinjaAPI
 from discussion.api import router as discussion_router
+from debateme.api import router as debateme_router
 
 api = NinjaAPI()
 
 api.add_router('/discussions/', discussion_router, tags=['Discussions'])
+api.add_router('/invites/', debateme_router, tags=['Invites'])
 
 accounts_urlpatterns = [
     path('', include('allauth.urls')),
