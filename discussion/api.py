@@ -11,7 +11,7 @@ from discussion.schemas import *
 router = Router(auth=django_auth)
 
 # API Endpoints
-@router.get("/", response=List[DiscussionListSchema])
+@router.get("/", response=List[DiscussionSchema])
 @paginate(PageNumberPagination, page_size=15)
 def get_discussions(request, filterType: Optional[Literal["active", "archived"]] = None):
     """
@@ -20,7 +20,7 @@ def get_discussions(request, filterType: Optional[Literal["active", "archived"]]
     return DiscussionService.get_discussions_for_user(request.user, filterType)
 
 
-@router.get("/most-recent", response=DiscussionDetailSchema)
+@router.get("/most-recent", response=DiscussionSchema)
 def get_most_recent_discussion(request):
     """
     Get the most recent active discussion for the current user.
@@ -34,7 +34,7 @@ def get_most_recent_discussion(request):
     return discussion
 
 
-@router.get("/{discussion_id}", response=DiscussionDetailSchema)
+@router.get("/{discussion_id}", response=DiscussionSchema)
 def get_discussion(request, discussion_id: int):
     """
     Get a specific discussion.
@@ -51,20 +51,12 @@ def get_discussion_messages(request, discussion_id: int):
     return DiscussionService.get_discussion_messages(discussion_id, request.user)
 
 
-@router.get("/{discussion_id}/info", response=DiscussionInfoSchema)
-def get_discussion_info(request, discussion_id: int):
-    """
-    Get detailed information about a discussion.
-    """
-    return DiscussionService.get_discussion_info(discussion_id, request.user)
-
-
-@router.patch("/{discussion_id}/archive", response=DiscussionDetailSchema)
-def set_archive_status(request, discussion_id: int, payload: ArchiveStatusSchema):
+@router.patch("/{discussion_id}/archive", response=DiscussionSchema)
+def set_archive_status(request, discussion_id: int, status: bool):
     """
     Archive or unarchive a discussion.
     """
-    return DiscussionService.set_discussion_archive_status(discussion_id, request.user, payload.status)
+    return DiscussionService.set_discussion_archive_status(discussion_id, request.user, status)
 
 
 @router.get("/{discussion_id}/readcheckpoints", response=List[ReadCheckpointSchema])

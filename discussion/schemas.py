@@ -2,69 +2,42 @@
 from datetime import datetime
 from typing import Optional
 
-from ninja import Schema
+from ninja import Schema, ModelSchema
+
+from debate.schemas import DebateSchema
+from discussion.models import ReadCheckpoint, Message, Discussion
+from debateme.schemas import InviteSchema
+from users.schemas import UserSchema
 
 
-class MessageSchema(Schema):
-    id: int
-    text: str
-    created_at: datetime
-    is_current_user: bool
+class MessageSchema(ModelSchema):
+    # is_current_user: bool # do we need this?
+    class Config:
+        model = Message
+        model_fields = '__all__'
+        model_depth = 0
 
 
-class CreateMessageSchema(Schema):
-    text: str
-
-
-class DiscussionListSchema(Schema):
-    id: int
-    debate_id: int
-    debate_title: str = None
-    participant1_id: int
-    participant2_id: int
-    latest_message_text: Optional[str] = None
-    latest_message_created_at: Optional[datetime] = None
-    latest_message_author: Optional[str] = None
+class DiscussionSchema(ModelSchema):
+    debate: DebateSchema
+    participant1: UserSchema
+    participant2: UserSchema
+    latest_message_text: Optional[str]
+    latest_message_created_at: Optional[datetime]
+    latest_message_author: Optional[str]
+    is_archived_for_current_user: bool
     is_unread: bool
     recent_date: datetime
-
-
-class DiscussionDetailSchema(Schema):
-    id: int
-    debate_id: int
-    debate_title: Optional[str] = None
-    participant1_id: int
-    participant2_id: int
-    is_archived_for_current_user: bool
-    created_at: datetime
-
-
-class DiscussionInfoSchema(Schema):
-    id: int
-    debate_id: int
-    debate_title: str
-    participant1_id: int
-    participant1_username: str
-    participant1_stance: str
-    participant2_id: int
-    participant2_username: str
-    participant2_stance: str
-    message_count: int
     is_from_invite: bool
-    invite_id: Optional[int] = None
-    is_archived_for_current_user: bool
+    invite_id: Optional[int]
+
+    class Config:
+        model = Discussion
+        model_fields = '__all__'
 
 
-class ArchiveStatusSchema(Schema):
-    status: bool
-
-
-class CreateDiscussionSchema(Schema):
-    debate_id: int
-    participant2_id: int
-
-
-class ReadCheckpointSchema(Schema):
-    user_id: int
-    last_message_read_id: Optional[int] = None
-    read_at: Optional[datetime] = None
+class ReadCheckpointSchema(ModelSchema):
+    class Config:
+        model = ReadCheckpoint
+        model_fields = '__all__'
+        model_depth = 0

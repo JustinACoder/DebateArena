@@ -4,6 +4,6 @@ from ninja import ModelSchema
 UserModel = get_user_model()
 
 class UserSchema(ModelSchema):
-    class Meta:
+    class Config:
         model = UserModel
-        exclude = ['password']
+        model_exclude = ['password']
